@@ -25,6 +25,8 @@ pub struct Species {
     types: Vec<u8>,
     types_past: Vec<(u8, Vec<u8>)>, // (last gn these types applied, types)
     pub base_stats: [u16; 6],
+    /// PokeAPI growth rate id (1 slow, 2 medium, 3 fast, 4 medium-slow, 5 erratic, 6 fluctuating)
+    pub growth: u8,
 }
 
 pub struct Move {
@@ -39,6 +41,7 @@ pub struct Move {
     pub class: u8, // 1 status, 2 physical, 3 special
     /// generation the move first appeared in
     pub gn: u8,
+    pub pp: u8,
     changes: Vec<(u16, Option<u8>, Option<u16>)>, // (changed-in version group order, old type, old power)
 }
 
@@ -107,6 +110,10 @@ pub struct Dex {
     pub version_groups: Vec<VersionGroup>,
     pub bosses: Vec<GameBosses>,
     move_by_ident: HashMap<String, u16>,
+    /// ability id -> (English, German)
+    pub abilities: HashMap<u16, (String, String)>,
+    /// Gen 4 game-internal item id -> (English, German)
+    pub items4: HashMap<u16, (String, String)>,
 }
 
 macro_rules! csv_file {
@@ -132,6 +139,30 @@ pub fn norm(s: &str) -> String {
     s.chars().filter(|c| c.is_alphanumeric()).flat_map(char::to_lowercase).collect()
 }
 
+/// Total EXP needed to reach `level` (the six growth rates, Bulbapedia formulas).
+pub fn exp_at(growth: u8, level: u8) -> u32 {
+    let n = level as i64;
+    let n3 = n * n * n;
+    let v = match growth {
+        1 => 5 * n3 / 4,
+        3 => 4 * n3 / 5,
+        4 => 6 * n3 / 5 - 15 * n * n + 100 * n - 140,
+        5 => match n {
+            ..=50 => n3 * (100 - n) / 50,
+            51..=68 => n3 * (150 - n) / 100,
+            69..=98 => n3 * ((1911 - 10 * n) / 3) / 500,
+            _ => n3 * (160 - n) / 100,
+        },
+        6 => match n {
+            ..=15 => n3 * ((n + 1) / 3 + 24) / 50,
+            16..=36 => n3 * (n + 14) / 50,
+            _ => n3 * (n / 2 + 32) / 50,
+        },
+        _ => n3,
+    };
+    if level <= 1 { 0 } else { v.max(0) as u32 }
+}
+
 impl Dex {
     pub fn load() -> Dex {
         let mut names: HashMap<(u16, u16), String> = HashMap::new();
@@ -151,6 +182,7 @@ impl Dex {
                 types: vec![],
                 types_past: vec![],
                 base_stats: [0; 6],
+                growth: num(&r, "growth_rate_id").unwrap_or(2),
             });
         }
         // Default form of species N is pokemon id N, so these ids line up for every species.
@@ -258,6 +290,7 @@ impl Dex {
                 accuracy: num(&r, "accuracy"),
                 class: num(&r, "damage_class_id").unwrap_or(1),
                 gn: num(&r, "generation_id").unwrap_or(1),
+                pp: num(&r, "pp").unwrap_or(0),
                 changes: vec![],
             });
         }
@@ -278,7 +311,26 @@ impl Dex {
             bosses.extend(f.games);
         }
 
-        Dex { species, moves, types, efficacy, efficacy_past, version_groups, bosses, move_by_ident }
+        let mut abilities: HashMap<u16, (String, String)> = HashMap::new();
+        for r in rows(csv_file!("ability_names")) {
+            if let (Some(id), Some(l)) = (num::<u16>(&r, "ability_id"), num::<u16>(&r, "local_language_id")) {
+                let e = abilities.entry(id).or_default();
+                if l == LANG_EN { e.0 = r["name"].clone(); } else if l == LANG_DE { e.1 = r["name"].clone(); }
+            }
+        }
+        let mut item_names: HashMap<u16, (String, String)> = HashMap::new();
+        for r in rows(csv_file!("item_names")) {
+            if let (Some(id), Some(l)) = (num::<u16>(&r, "item_id"), num::<u16>(&r, "local_language_id")) {
+                let e = item_names.entry(id).or_default();
+                if l == LANG_EN { e.0 = r["name"].clone(); } else if l == LANG_DE { e.1 = r["name"].clone(); }
+            }
+        }
+        // PokeAPI item ids differ from the games' own; item_game_indices maps them per generation.
+        let items4 = scan(csv_file!("item_game_indices"), &["item_id", "generation_id", "game_index"])
+            .filter(|f| f[1] == "4")
+            .filter_map(|f| Some((f[2].parse().ok()?, item_names.get(&f[0].parse().ok()?)?.clone())))
+            .collect();
+        Dex { species, moves, types, efficacy, efficacy_past, version_groups, bosses, move_by_ident, abilities, items4 }
     }
 
     pub fn vg(&self, ident: &str) -> Option<&VersionGroup> {

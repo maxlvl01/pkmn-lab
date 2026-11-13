@@ -32,6 +32,7 @@ struct RomData {
     evolutions: HashMap<u16, Vec<(u16, EvoHow)>>,
     trainers: Vec<Boss>,
     wild: HashMap<u16, Vec<crate::data::WildSpot>>,
+    places: Vec<String>,
 }
 
 pub struct App {
@@ -60,6 +61,9 @@ pub struct App {
     /// Spoiler protection is on at every start; the player confirms once per session to lift it.
     spoilers_shown: bool,
     spoiler_ask: bool,
+    /// Werte tab: member shown in the profile, members drawn in the base-stat chart
+    profile: usize,
+    radar_show: [bool; 6],
     data_key: String,
     report: Option<Report>,
     dirty: bool,
@@ -202,6 +206,8 @@ impl App {
             trainer_limit: 30,
             spoilers_shown: false,
             spoiler_ask: false,
+            profile: 0,
+            radar_show: [true; 6],
             data_key: String::new(),
             report: None,
             dirty: true,
@@ -273,7 +279,7 @@ impl App {
             let game = "heartgold-soulsilver";
             let mut bosses = self.dex.bosses.iter().find(|g| g.id == game).map(|g| g.bosses.clone()).unwrap_or_default();
             rom::apply_rom_teams(&bytes, game, &mut bosses, &self.dex)?;
-            Ok(RomData { bosses, level_up: rom::hgss_learnsets(&bytes).unwrap_or_default(), evolutions: rom::hgss_evolutions(&bytes).unwrap_or_default(), trainers: rom::hgss_trainers(&bytes, &self.dex), wild: rom::hgss_wild(&bytes) })
+            Ok(RomData { bosses, level_up: rom::hgss_learnsets(&bytes).unwrap_or_default(), evolutions: rom::hgss_evolutions(&bytes).unwrap_or_default(), trainers: rom::hgss_trainers(&bytes, &self.dex), wild: rom::hgss_wild(&bytes), places: rom::hgss_places(&bytes) })
         });
         match result {
             Ok(r) => {
@@ -540,7 +546,7 @@ impl App {
                         ui.horizontal(|ui| {
                             self.species_sprite(ui, id, 28.0);
                             if ui.selectable_label(false, &name).clicked() {
-                                self.team[i] = Mon { species: id, level: self.team[i].level, moves: vec![], nickname: None };
+                                self.team[i] = Mon { species: id, level: self.team[i].level, moves: vec![], nickname: None, details: None };
                                 self.search[i] = name.clone();
                                 self.dirty = true;
                             }
@@ -559,7 +565,7 @@ impl App {
         if self.team.len() < 6
             && ui.add_sized([ui.available_width(), 28.0], egui::Button::new(t(l, "+ Add Pokémon", "+ Pokémon hinzufügen"))).clicked()
         {
-            self.team.push(Mon { species: 0, level: 5, moves: vec![], nickname: None });
+            self.team.push(Mon { species: 0, level: 5, moves: vec![], nickname: None, details: None });
             self.search.push(String::new());
         }
     }
@@ -611,7 +617,7 @@ impl App {
                 self.open_save_dialog();
             }
             if ui.add_sized([220.0, 36.0], egui::Button::new(t(l, "Enter team by hand", "Team von Hand eingeben"))).clicked() {
-                self.team.push(Mon { species: 0, level: 5, moves: vec![], nickname: None });
+                self.team.push(Mon { species: 0, level: 5, moves: vec![], nickname: None, details: None });
             }
         });
     }
@@ -631,7 +637,7 @@ impl App {
                     ui.add(egui::ProgressBar::new(r.summary.offense_pct as f32 / 100.0).desired_width(230.0).fill(bar_color(r.summary.offense_pct))
                         .text(format!("{} {}%", t(l, "Offensive coverage", "Angriffs-Abdeckung"), r.summary.offense_pct)));
                     ui.add(egui::ProgressBar::new(r.summary.defense_pct as f32 / 100.0).desired_width(230.0).fill(bar_color(r.summary.defense_pct))
-                        .text(format!("{} {}%", t(l, "Types handled", "Typen im Griff"), r.summary.defense_pct)));
+                        .text(format!("{} {}%", t(l, "Types handled", "Typenvorteile"), r.summary.defense_pct)));
                     let bal = (r.comp.level_balance * 100.0).round() as u32;
                     ui.add(egui::ProgressBar::new(r.comp.level_balance).desired_width(230.0).fill(bar_color(bal))
                         .text(format!("{} {bal}%", t(l, "Level balance", "Level-Balance"))))
@@ -680,14 +686,14 @@ impl App {
         }
     }
 
-    fn tab_stats(&self, ui: &mut Ui, r: &Report) {
+    fn tab_stats(&mut self, ui: &mut Ui, r: &Report) {
         use analysis::Axis::*;
         let l = self.lang;
         let c = &r.comp;
         let axis_text = |a: analysis::Axis| -> (&'static str, &'static str) {
             match a {
                 Offense => (t(l, "Coverage", "Angriffs-Abdeckung"), t(l, "Types your moves hit super effectively.", "Typen, die deine Attacken sehr effektiv treffen.")),
-                Defense => (t(l, "Types handled", "Typen im Griff"), t(l, "Attack types your team resists or answers.", "Angriffstypen, die dein Team abwehrt oder kontert.")),
+                Defense => (t(l, "Types handled", "Typenvorteile"), t(l, "Attack types your team resists or answers.", "Angriffstypen, die dein Team abwehrt oder kontert.")),
                 Levels => (t(l, "Level balance", "Level-Balance"), t(l, "How close everyone is to your strongest member.", "Wie nah alle an deinem stärksten Pokémon sind.")),
                 PhysSpec => (t(l, "Phys./Spec. mix", "Physisch/Spezial"), t(l, "Even mix of physical and special attacks: walls can't stop you with one stat.", "Ausgewogene physische und spezielle Attacken: eine Mauer stoppt dich nicht mit einem Wert.")),
                 Speed => (t(l, "Speed", "Tempo"), t(l, "Average base Init.; 110 counts as full.", "Durchschnittlicher Basiswert Init.; 110 zählt voll.")),
@@ -707,23 +713,39 @@ impl App {
                 radar(ui, size, &labels, &[(ACCENT, c.axes.iter().map(|a| a.1).collect())]);
             });
         };
+        let show = std::cell::Cell::new(self.radar_show);
         let bases = |ui: &mut Ui| {
             card(ui, |ui| {
                 ui.label(RichText::new(t(l, "Base stats (150 = edge)", "Basiswerte (150 = Rand)")).size(17.0).strong());
-                let labels: Vec<String> = stat_short(l).iter().enumerate().map(|(k, n)| format!("{n} {}", c.avg_base[k].round())).collect();
-                let mut series: Vec<(Color32, Vec<f32>)> = self.team.iter().enumerate().filter_map(|(i, m)| {
-                    let s = self.dex.species.get(&m.species)?;
-                    Some((MEMBER_COLORS[i % 6].gamma_multiply(0.7), s.base_stats.iter().map(|&b| b as f32 / 150.0).collect()))
-                }).collect();
-                series.push((Color32::WHITE, c.avg_base.iter().map(|&b| b / 150.0).collect()));
+                let base_of = |i: usize| self.dex.species.get(&self.team[i].species).map(|s| s.base_stats);
+                let mut max = [0f32; 6];
+                for i in 0..self.team.len() { if let Some(b) = base_of(i) { for k in 0..6 { max[k] = max[k].max(b[k] as f32); } } }
+                let labels: Vec<String> = stat_short(l).iter().enumerate()
+                    .map(|(k, n)| format!("{n}  Ø {} · max {}", c.avg_base[k].round(), max[k])).collect();
+                let mut series: Vec<(Color32, Vec<f32>)> = vec![
+                    (Color32::from_rgb(0xff, 0xd0, 0x60), max.iter().map(|&b| b / 150.0).collect()),
+                    (Color32::WHITE, c.avg_base.iter().map(|&b| b / 150.0).collect()),
+                ];
+                let on = show.get();
+                for i in 0..self.team.len().min(6) {
+                    if let (true, Some(b)) = (on[i], base_of(i)) { series.push((MEMBER_COLORS[i], b.iter().map(|&x| x as f32 / 150.0).collect())); }
+                }
                 radar(ui, size, &labels, &series);
                 ui.horizontal_wrapped(|ui| {
-                    for (i, m) in self.team.iter().enumerate() {
-                        swatch(ui, MEMBER_COLORS[i % 6]);
-                        ui.label(RichText::new(self.sname(m.species)).small());
-                    }
+                    swatch(ui, Color32::from_rgb(0xff, 0xd0, 0x60));
+                    ui.label(RichText::new(t(l, "team maximum", "Team-Maximum")).small());
                     swatch(ui, Color32::WHITE);
-                    ui.label(RichText::new(t(l, "team average (numbers)", "Team-Durchschnitt (Zahlen)")).small());
+                    ui.label(RichText::new(t(l, "team average", "Team-Durchschnitt")).small());
+                });
+                ui.horizontal_wrapped(|ui| {
+                    let mut on = show.get();
+                    for i in 0..self.team.len().min(6) {
+                        swatch(ui, MEMBER_COLORS[i]);
+                        if ui.selectable_label(on[i], self.sname(self.team[i].species)).clicked() { on[i] = !on[i]; }
+                    }
+                    if ui.small_button(t(l, "all", "alle")).clicked() { on = [true; 6]; }
+                    if ui.small_button(t(l, "none", "keine")).clicked() { on = [false; 6]; }
+                    show.set(on);
                 });
             });
         };
@@ -734,6 +756,25 @@ impl App {
             ui.add_space(8.0);
             bases(ui);
         }
+        self.radar_show = show.get();
+        ui.add_space(8.0);
+        self.matchup_matrix(ui, r);
+        ui.add_space(8.0);
+        // Player profile: pick a member, see everything about it.
+        card(ui, |ui| {
+            ui.horizontal_wrapped(|ui| {
+                ui.label(RichText::new(t(l, "Profile", "Profil")).size(17.0).strong());
+                ui.add_space(8.0);
+                for i in 0..self.team.len() {
+                    let on = self.profile == i;
+                    let b = egui::Button::new(RichText::new(self.nickname(i).unwrap_or_else(|| self.sname(self.team[i].species)))
+                        .color(if on { Color32::WHITE } else { MUTED })).fill(if on { ACCENT } else { CARD_HI }).corner_radius(CornerRadius::same(8));
+                    if ui.add(b).clicked() { self.profile = i; }
+                }
+            });
+        });
+        if self.profile >= self.team.len() { self.profile = 0; }
+        if !self.team.is_empty() { self.member_profile(ui, self.profile); }
         ui.add_space(8.0);
         // What each axis means, with its value.
         card(ui, |ui| {
@@ -766,8 +807,8 @@ impl App {
         // Every member in numbers: stats at its level (estimate), base stat total and role.
         card(ui, |ui| {
             ui.label(RichText::new(t(l, "Members", "Mitglieder")).size(17.0).strong());
-            ui.label(RichText::new(t(l, "Stats at the current level, estimated with average IVs, no EVs and a neutral nature.",
-                "Werte auf dem aktuellen Level, geschätzt mit durchschnittlichen DVs, ohne Fleißpunkte und mit neutralem Wesen.")).color(MUTED).small());
+            ui.label(RichText::new(t(l, "Stats at the current level: from your save where it has them (Gen 4), otherwise estimated with average IVs, no EVs and a neutral nature.",
+                "Werte auf dem aktuellen Level: aus deinem Spielstand, wo er sie hat (Gen 4), sonst geschätzt mit durchschnittlichen DVs, ohne Fleißpunkte und mit neutralem Wesen.")).color(MUTED).small());
             egui::Grid::new("members").striped(true).spacing([14.0, 6.0]).show(ui, |ui| {
                 ui.label("");
                 ui.label("");
@@ -777,7 +818,7 @@ impl App {
                 ui.end_row();
                 for (i, m) in self.team.iter().enumerate() {
                     let Some(s) = self.dex.species.get(&m.species) else { continue };
-                    let stats = analysis::stats_at(&s.base_stats, m.level);
+                    let stats = m.details.as_ref().map_or_else(|| analysis::stats_at(&s.base_stats, m.level), |d| d.stats);
                     ui.horizontal(|ui| {
                         swatch(ui, MEMBER_COLORS[i % 6]);
                         self.species_sprite(ui, m.species, 40.0);
@@ -795,6 +836,272 @@ impl App {
                 }
             });
         });
+    }
+
+    /// Members against every boss ahead: + for each of their Pokémon you hit super effectively, − for each that hits you.
+    fn matchup_matrix(&self, ui: &mut Ui, r: &Report) {
+        let l = self.lang;
+        if r.bosses.is_empty() || self.team.is_empty() { return; }
+        let gn = self.dex.vg(&self.game_id).map_or(9, |v| v.gn);
+        let vg = self.dex.vg(&self.game_id).unwrap();
+        card(ui, |ui| {
+            ui.label(RichText::new(t(l, "Matchups against the bosses ahead", "Duelle gegen die kommenden Bosse")).size(17.0).strong());
+            ui.label(RichText::new(t(l, "Per member, with today's types and moves: +1 for each of their Pokémon it hits super effectively, −1 for each whose type hits it super effectively.",
+                "Pro Mitglied, mit heutigen Typen und Attacken: +1 für jedes ihrer Pokémon, das es sehr effektiv trifft, −1 für jedes, dessen Typ es sehr effektiv trifft.")).color(MUTED).small());
+            egui::ScrollArea::horizontal().id_salt("matrix").show(ui, |ui| {
+                egui::Grid::new("matrix_grid").spacing([6.0, 6.0]).show(ui, |ui| {
+                    ui.label("");
+                    for bv in r.bosses.iter().take(12) {
+                        let b = &self.bosses[bv.boss];
+                        ui.vertical_centered(|ui| {
+                            sprite(ui, self.sprites.trainer(&b.name_en, &self.game_id), 40.0);
+                            ui.label(RichText::new(l.pick(&b.name_en, &b.name_de)).small());
+                        });
+                    }
+                    ui.end_row();
+                    for (i, m) in self.team.iter().enumerate() {
+                        let Some(s) = self.dex.species.get(&m.species) else { continue };
+                        let my_types = self.dex.species_types(s, gn);
+                        let attacks: Vec<u8> = m.moves.iter().filter_map(|id| self.dex.moves.get(id))
+                            .filter(|mv| mv.class != 1).map(|mv| self.dex.move_stats(mv, vg)).filter(|x| x.1.is_some()).map(|x| x.0).collect();
+                        ui.horizontal(|ui| { swatch(ui, MEMBER_COLORS[i % 6]); self.species_sprite(ui, m.species, 32.0); });
+                        for bv in r.bosses.iter().take(12) {
+                            let (mut good, mut bad) = (vec![], vec![]);
+                            for bm in &bv.mons {
+                                if attacks.iter().any(|&a| self.dex.eff(a, &bm.types, gn) >= 2.0) { good.push(bm.species); }
+                                if bm.types.iter().any(|&a| self.dex.eff(a, &my_types, gn) >= 2.0) { bad.push(bm.species); }
+                            }
+                            let net = good.len() as i32 - bad.len() as i32;
+                            let col = match net { n if n >= 2 => GOOD, 1 => Color32::from_rgb(0x2f, 0x7e, 0x50), 0 => CARD_HI, -1 => Color32::from_rgb(0x8a, 0x5a, 0x1e), _ => BAD };
+                            let (rect, resp) = ui.allocate_exact_size(egui::vec2(64.0, 34.0), egui::Sense::hover());
+                            ui.painter().rect_filled(rect, 6.0, col);
+                            ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER, format!("{net:+}"), egui::FontId::proportional(15.0), Color32::WHITE);
+                            if self.spoilers_shown || bv.beaten {
+                                let names = |v: &[u16]| v.iter().map(|&x| self.sname(x)).collect::<Vec<_>>().join(", ");
+                                resp.on_hover_text(format!("{}: {}\n{}: {}", t(l, "You hit", "Du triffst"), names(&good), t(l, "Hits you", "Trifft dich"), names(&bad)));
+                            }
+                        }
+                        ui.end_row();
+                    }
+                });
+            });
+        });
+    }
+
+    /// The member's nickname, if it has a real one (the games store the species name in capitals by default).
+    fn nickname(&self, i: usize) -> Option<String> {
+        let m = &self.team[i];
+        m.nickname.clone().filter(|n| !n.is_empty() && n.to_lowercase() != self.sname(m.species).to_lowercase()
+            && n.to_lowercase() != self.dex.species_name(m.species, Lang::En).to_lowercase())
+    }
+
+    fn item_name(&self, id: u16) -> Option<String> {
+        self.dex.items4.get(&id).map(|(en, de)| self.lang.pick(en, de).to_string())
+    }
+
+    /// Football-manager style card: everything known about one member.
+    fn member_profile(&self, ui: &mut Ui, i: usize) {
+        let l = self.lang;
+        let m = &self.team[i];
+        let Some(s) = self.dex.species.get(&m.species) else { return };
+        let gn = self.dex.vg(&self.game_id).map_or(9, |v| v.gn);
+        let vg = self.dex.vg(&self.game_id).unwrap();
+        let d = m.details.as_ref();
+        let types = self.dex.species_types(s, gn);
+        let stats = d.map_or_else(|| analysis::stats_at(&s.base_stats, m.level), |d| d.stats);
+        card(ui, |ui| {
+            ui.set_width(ui.available_width() - 28.0);
+            // --- header ---
+            ui.horizontal(|ui| {
+                self.species_sprite(ui, m.species, 120.0);
+                ui.vertical(|ui| {
+                    ui.horizontal(|ui| {
+                        let name = self.nickname(i);
+                        ui.label(RichText::new(name.clone().unwrap_or_else(|| self.sname(m.species))).size(24.0).strong());
+                        if name.is_some() { ui.label(RichText::new(self.sname(m.species)).size(16.0).color(MUTED)); }
+                        ui.label(RichText::new(format!("Lv {}", m.level)).size(18.0));
+                        self.types_row(ui, &types);
+                        if d.is_some_and(|d| d.shiny) { pill(ui, t(l, "Shiny", "Schillernd"), OKAY); }
+                        if d.is_some_and(|d| d.pokerus & 0x0F != 0) { pill(ui, "Pokérus", Color32::from_rgb(0xb0, 0x6a, 0xe0)); }
+                    });
+                    match d {
+                        None => { ui.label(RichText::new(t(l, "Entered by hand: nature, IVs, EVs and item are unknown; stats are estimates.",
+                            "Von Hand eingegeben: Wesen, DVs, Fleißpunkte und Item sind unbekannt; die Werte sind geschätzt.")).color(MUTED)); }
+                        Some(d) => {
+                            egui::Grid::new(("facts", i)).spacing([18.0, 3.0]).show(ui, |ui| {
+                                let fact = |ui: &mut Ui, k: &str, v: String| { ui.label(RichText::new(k).color(MUTED)); ui.label(v); };
+                                let nat = NATURES[d.nature as usize % 25];
+                                let eff = analysis::nature_effect(d.nature).map(|(u, dn)| format!("  (+{} −{})", stat_short(l)[u], stat_short(l)[dn])).unwrap_or_default();
+                                fact(ui, t(l, "Nature", "Wesen"), format!("{}{eff}", l.pick(nat.0, nat.1)));
+                                let ab = self.dex.abilities.get(&d.ability).map(|(en, de)| l.pick(en, de).to_string()).unwrap_or_else(|| format!("#{}", d.ability));
+                                fact(ui, t(l, "Ability", "Fähigkeit"), ab);
+                                ui.end_row();
+                                fact(ui, "Item", if d.item == 0 { "–".into() } else { self.item_name(d.item).unwrap_or_else(|| format!("#{}", d.item)) });
+                                let ball = if (1..=16).contains(&d.ball) { self.item_name(d.ball).unwrap_or_default() } else { format!("#{}", d.ball) };
+                                fact(ui, t(l, "Ball", "Ball"), ball);
+                                ui.end_row();
+                                let place = self.rom.as_ref().and_then(|r| r.places.get(d.met_place as usize)).cloned()
+                                    .unwrap_or_else(|| format!("{} #{}", t(l, "place", "Ort"), d.met_place));
+                                fact(ui, t(l, "Caught", "Gefangen"), if d.met_level == 0 { format!("{place} ({})", t(l, "hatched", "geschlüpft")) } else { format!("{place}, Lv {}", d.met_level) });
+                                fact(ui, t(l, "Friendship", "Freundschaft"), format!("{} / 255", d.friendship));
+                                ui.end_row();
+                            });
+                            // HP and EXP bars
+                            ui.horizontal(|ui| {
+                                let hp = d.hp_now as f32 / d.stats[0].max(1) as f32;
+                                ui.add(egui::ProgressBar::new(hp).desired_width(220.0).fill(if hp > 0.5 { GOOD } else if hp > 0.2 { OKAY } else { BAD })
+                                    .text(format!("KP {} / {}", d.hp_now, d.stats[0])));
+                                let (lo, hi) = (crate::data::exp_at(s.growth, m.level), crate::data::exp_at(s.growth, m.level.saturating_add(1).min(100)));
+                                let frac = if hi > lo { (d.exp.saturating_sub(lo)) as f32 / (hi - lo) as f32 } else { 1.0 };
+                                ui.add(egui::ProgressBar::new(frac).desired_width(260.0).fill(Color32::from_rgb(0x3d, 0x7b, 0xd8))
+                                    .text(format!("EP {}  ·  {} {} Lv {}", d.exp, hi.saturating_sub(d.exp), t(l, "to", "bis"), (m.level + 1).min(100))));
+                            });
+                        }
+                    }
+                });
+            });
+            ui.add_space(8.0);
+            // --- attributes 1-20, three columns like a football manager ---
+            let reference = analysis::real_stats(&[130; 6], &[31; 6], &[0; 6], 0, m.level);
+            let rate = |v: f32| (v.clamp(0.0, 1.0) * 19.0).round() as u8 + 1;
+            let damaging: Vec<(u8, u16, Option<u8>)> = m.moves.iter().filter_map(|id| self.dex.moves.get(id)).filter(|mv| mv.class != 1)
+                .filter_map(|mv| { let (ty, p) = self.dex.move_stats(mv, vg); Some((ty, p?, mv.accuracy)) }).collect();
+            let all = self.dex.types_in_gen(gn);
+            let hits = all.iter().filter(|&&def| damaging.iter().any(|(a, ..)| self.dex.eff(*a, &[def], gn) >= 2.0)).count();
+            let resists = all.iter().filter(|&&a| self.dex.eff(a, &types, gn) < 1.0).count();
+            let weak = all.iter().filter(|&&a| self.dex.eff(a, &types, gn) > 1.0).count();
+            let final_bst = self.final_bst(m.species);
+            let cols: [(&str, Vec<(String, Option<u8>, String)>); 3] = [
+                (t(l, "Stats", "Werte"), (0..6).map(|k| (stat_short(l)[k].to_string(), Some(rate(stats[k] as f32 / reference[k] as f32)),
+                    format!("{} {} ({} {})", stats[k], t(l, "at this level", "auf diesem Level"), t(l, "base", "Basis"), s.base_stats[k]))).collect()),
+                (t(l, "Battle", "Kampf"), vec![
+                    (t(l, "Coverage", "Abdeckung").into(), Some(rate(hits as f32 / all.len() as f32 * 2.0)), format!("{hits} {}", t(l, "types hit super effectively", "Typen sehr effektiv"))),
+                    (t(l, "Move power", "Attackenstärke").into(), (!damaging.is_empty()).then(|| rate(damaging.iter().map(|x| x.1 as f32).sum::<f32>() / damaging.len() as f32 / 100.0)),
+                        t(l, "average power of its damaging moves (100 = full)", "durchschnittliche Stärke der Schadensattacken (100 = voll)").into()),
+                    (t(l, "Accuracy", "Genauigkeit").into(), (!damaging.is_empty()).then(|| rate((damaging.iter().map(|x| x.2.unwrap_or(100) as f32).sum::<f32>() / damaging.len() as f32 - 50.0) / 50.0)),
+                        t(l, "average accuracy of its damaging moves", "durchschnittliche Genauigkeit der Schadensattacken").into()),
+                    ("STAB".into(), Some(if damaging.iter().any(|x| types.contains(&x.0)) { 20 } else { 1 }), t(l, "has a damaging move of its own type", "hat eine Schadensattacke des eigenen Typs").into()),
+                    (t(l, "Resistances", "Resistenzen").into(), Some(rate(resists as f32 / 8.0)), format!("{resists} {}", t(l, "attack types resisted", "Angriffstypen abgewehrt"))),
+                    (t(l, "Few weaknesses", "Wenig Schwächen").into(), Some(rate(1.0 - weak as f32 / 6.0)), format!("{weak} {}", t(l, "weaknesses", "Schwächen"))),
+                ]),
+                (t(l, "Development", "Entwicklung"), vec![
+                    (t(l, "Potential", "Potenzial").into(), Some(rate((final_bst as f32 - 250.0) / 350.0)), format!("{} {final_bst}", t(l, "base total when fully evolved:", "Basis-Summe voll entwickelt:"))),
+                    (t(l, "IV quality", "DV-Qualität").into(), d.map(|d| rate(d.ivs.iter().map(|&x| x as f32).sum::<f32>() / 186.0)),
+                        d.map_or("–".into(), |d| format!("{} / 186", d.ivs.iter().map(|&x| x as u32).sum::<u32>()))),
+                    (t(l, "Training (EVs)", "Training (Fleißpunkte)").into(), d.map(|d| rate(d.evs.iter().map(|&x| x as f32).sum::<f32>() / 510.0)),
+                        d.map_or("–".into(), |d| format!("{} / 510", d.evs.iter().map(|&x| x as u32).sum::<u32>()))),
+                    (t(l, "Friendship", "Freundschaft").into(), d.map(|d| rate(d.friendship as f32 / 255.0)), d.map_or("–".into(), |d| format!("{} / 255", d.friendship))),
+                    (t(l, "Level in team", "Level im Team").into(), Some(rate(m.level as f32 / self.team.iter().map(|x| x.level).max().unwrap_or(1) as f32)),
+                        t(l, "compared with your strongest member", "im Vergleich zu deinem stärksten Mitglied").into()),
+                ]),
+            ];
+            ui.horizontal_top(|ui| {
+                for (title, rows) in cols.iter() {
+                    egui::Frame::new().fill(CARD_HI).corner_radius(CornerRadius::same(8)).inner_margin(egui::Margin::same(10)).show(ui, |ui| {
+                        ui.set_width(250.0);
+                        ui.vertical(|ui| {
+                        ui.label(RichText::new(*title).strong());
+                        egui::Grid::new((title, i)).spacing([10.0, 3.0]).min_col_width(40.0).show(ui, |ui| {
+                            for (name, v, tip) in rows {
+                                ui.label(name).on_hover_text(tip);
+                                match v {
+                                    Some(v) => ui.label(RichText::new(v.to_string()).strong().size(16.0).color(attr_color(*v))).on_hover_text(tip),
+                                    None => ui.label(RichText::new("–").color(MUTED)),
+                                };
+                                ui.end_row();
+                            }
+                        });
+                        });
+                    });
+                }
+            });
+            ui.label(RichText::new(t(l, "1-20 like a football manager. Stats: 20 = what a base-130 Pokémon with perfect IVs reaches at this level. Hover for the numbers.",
+                "1–20 wie in einem Fußballmanager. Werte: 20 = was ein Pokémon mit Basiswert 130 und perfekten DVs auf diesem Level erreicht. Für die Zahlen mit der Maus darüberfahren.")).color(MUTED).small());
+            ui.add_space(8.0);
+            // --- IVs and EVs ---
+            if let Some(d) = d {
+                ui.horizontal_top(|ui| {
+                    for (title, vals, max, total) in [(t(l, "IVs (0-31)", "DVs (0–31)"), d.ivs.map(|x| x as u32), 31u32, 186u32), (t(l, "EVs (0-255)", "Fleißpunkte (0–255)"), d.evs.map(|x| x as u32), 255, 510)] {
+                        egui::Frame::new().fill(CARD_HI).corner_radius(CornerRadius::same(8)).inner_margin(egui::Margin::same(10)).show(ui, |ui| {
+                            ui.set_width(380.0);
+                            ui.vertical(|ui| {
+                            ui.label(RichText::new(format!("{title}   {} / {total}", vals.iter().sum::<u32>())).strong());
+                            egui::Grid::new((title, "bars", i)).spacing([8.0, 3.0]).show(ui, |ui| {
+                                for k in 0..6 {
+                                    let nat = analysis::nature_effect(d.nature);
+                                    let mark = match nat { Some((u, _)) if u == k => " +", Some((_, dn)) if dn == k => " −", _ => "" };
+                                    ui.label(RichText::new(format!("{}{mark}", stat_short(l)[k])).color(MUTED));
+                                    ui.label(RichText::new(vals[k].to_string()).strong());
+                                    let frac = vals[k] as f32 / max as f32;
+                                    ui.add(egui::ProgressBar::new(frac).desired_width(220.0).desired_height(8.0)
+                                        .fill(if vals[k] == max { GOOD } else { Color32::from_rgb(0x3d, 0x7b, 0xd8) }));
+                                    ui.end_row();
+                                }
+                            });
+                            });
+                        });
+                    }
+                });
+                ui.add_space(8.0);
+            }
+            // --- moves ---
+            egui::Frame::new().fill(CARD_HI).corner_radius(CornerRadius::same(8)).inner_margin(egui::Margin::same(10)).show(ui, |ui| {
+                ui.label(RichText::new(t(l, "Moves", "Attacken")).strong());
+                egui::Grid::new(("moves_detail", i)).striped(true).spacing([16.0, 4.0]).show(ui, |ui| {
+                    for h in [t(l, "Move", "Attacke"), t(l, "Type", "Typ"), t(l, "Class", "Kategorie"), t(l, "Power", "Stärke"), t(l, "Accuracy", "Genauigkeit"), t(l, "PP", "AP"), ""] {
+                        ui.label(RichText::new(h).color(MUTED));
+                    }
+                    ui.end_row();
+                    for (k, &id) in m.moves.iter().enumerate() {
+                        let Some(mv) = self.dex.moves.get(&id) else { continue };
+                        let (ty, p) = self.dex.move_stats(mv, vg);
+                        let class = if mv.class == 1 || p.is_none() { 0 } else if gn <= 3 { if matches!(ty, 10..=17) { 2 } else { 1 } } else if mv.class == 3 { 2 } else { 1 };
+                        ui.label(RichText::new(self.mname(id)).strong());
+                        self.type_badge(ui, ty);
+                        ui.label([t(l, "Status", "Status"), t(l, "Physical", "Physisch"), t(l, "Special", "Speziell")][class]);
+                        ui.label(p.map_or("–".into(), |p| p.to_string()));
+                        ui.label(mv.accuracy.map_or("–".into(), |a| format!("{a}%")));
+                        let max_pp = mv.pp as u32 * (5 + d.map_or(0, |d| d.pp_ups[k.min(3)] as u32)) / 5;
+                        ui.label(d.map_or(max_pp.to_string(), |d| format!("{} / {max_pp}", d.pp[k.min(3)])));
+                        if class != 0 && types.contains(&ty) { pill(ui, "STAB", GOOD); } else { ui.label(""); }
+                        ui.end_row();
+                    }
+                });
+            });
+            ui.add_space(8.0);
+            // --- growth to Lv 100 ---
+            egui::Frame::new().fill(CARD_HI).corner_radius(CornerRadius::same(8)).inner_margin(egui::Margin::same(10)).show(ui, |ui| {
+                ui.label(RichText::new(t(l, "Stat growth to Lv 100 (level evolutions included)", "Wertentwicklung bis Lv 100 (mit Level-Entwicklungen)")).strong());
+                let (ivs, evs, nature) = d.map_or(([15; 6], [0; 6], 0), |d| (d.ivs, d.evs, d.nature));
+                let mut lines: Vec<Vec<(f32, f32)>> = vec![vec![]; 6];
+                let mut marks = vec![];
+                let mut sp = m.species;
+                for lv in m.level..=100 {
+                    if let Some(&(to, _)) = self.learn.evolutions.get(&sp).and_then(|v| v.iter().find(|e| matches!(e.1, EvoHow::Level(x) if x <= lv))) {
+                        sp = to;
+                        marks.push((lv as f32, self.sname(to)));
+                    }
+                    let base = self.dex.species.get(&sp).map_or(s.base_stats, |x| x.base_stats);
+                    let st = analysis::real_stats(&base, &ivs, &evs, nature, lv);
+                    for k in 0..6 { lines[k].push((lv as f32, st[k] as f32)); }
+                }
+                let series: Vec<(Color32, Vec<(f32, f32)>)> = lines.into_iter().enumerate().map(|(k, v)| (STAT_COLORS[k], v)).collect();
+                line_chart(ui, ui.available_width().min(1100.0), 260.0, (m.level as f32, 100.0), &series, &marks);
+                ui.horizontal_wrapped(|ui| {
+                    for k in 0..6 { swatch(ui, STAT_COLORS[k]); ui.label(RichText::new(stat_short(l)[k]).small()); }
+                    if d.is_none() { ui.label(RichText::new(t(l, "(average IVs, no EVs)", "(durchschnittliche DVs, ohne Fleißpunkte)")).small().color(MUTED)); }
+                });
+            });
+        });
+    }
+
+    /// Base stat total of the last level-evolution stage (or the first branch otherwise).
+    fn final_bst(&self, species: u16) -> u16 {
+        let mut sp = species;
+        for _ in 0..3 {
+            match self.learn.evolutions.get(&sp).and_then(|v| v.first()) { Some(&(to, _)) => sp = to, None => break }
+        }
+        self.dex.species.get(&sp).map_or(0, |s| s.base_stats.iter().sum())
     }
 
     fn tab_team(&self, ui: &mut Ui, r: &Report) {
@@ -1455,6 +1762,63 @@ const MEMBER_COLORS: [Color32; 6] = [
     Color32::from_rgb(0xe8, 0x4a, 0x4a), Color32::from_rgb(0x3d, 0x9b, 0xe8), Color32::from_rgb(0x4c, 0xc2, 0x7a),
     Color32::from_rgb(0xf0, 0xb9, 0x3a), Color32::from_rgb(0xb0, 0x6a, 0xe0), Color32::from_rgb(0x3a, 0xd0, 0xc8),
 ];
+
+/// German nature names from the ROM (a/0/2/7 file 34), with the English ones.
+const NATURES: [(&str, &str); 25] = [
+    ("Hardy", "Robust"), ("Lonely", "Solo"), ("Brave", "Mutig"), ("Adamant", "Hart"), ("Naughty", "Frech"),
+    ("Bold", "Kühn"), ("Docile", "Sanft"), ("Relaxed", "Locker"), ("Impish", "Pfiffig"), ("Lax", "Lasch"),
+    ("Timid", "Scheu"), ("Hasty", "Hastig"), ("Serious", "Ernst"), ("Jolly", "Froh"), ("Naive", "Naiv"),
+    ("Modest", "Mäßig"), ("Mild", "Mild"), ("Quiet", "Ruhig"), ("Bashful", "Zaghaft"), ("Rash", "Hitzig"),
+    ("Calm", "Still"), ("Gentle", "Zart"), ("Sassy", "Forsch"), ("Careful", "Sacht"), ("Quirky", "Kauzig"),
+];
+
+const STAT_COLORS: [Color32; 6] = [
+    Color32::from_rgb(0x4c, 0xc2, 0x7a), Color32::from_rgb(0xe8, 0x5a, 0x5a), Color32::from_rgb(0xf0, 0xb9, 0x3a),
+    Color32::from_rgb(0x3d, 0x9b, 0xe8), Color32::from_rgb(0x6a, 0xd0, 0xc8), Color32::from_rgb(0xe0, 0x6a, 0xd0),
+];
+
+/// Football-manager colours for a 1-20 attribute.
+fn attr_color(v: u8) -> Color32 {
+    match v {
+        16.. => Color32::from_rgb(0x4c, 0xd2, 0x7a),
+        11..=15 => Color32::from_rgb(0xa8, 0xd8, 0x6a),
+        6..=10 => Color32::from_rgb(0xf0, 0xb9, 0x3a),
+        _ => Color32::from_rgb(0xe8, 0x5a, 0x5a),
+    }
+}
+
+/// Simple line chart: x range, y from 0 to the highest value, optional vertical markers with labels.
+fn line_chart(ui: &mut Ui, w: f32, h: f32, x: (f32, f32), series: &[(Color32, Vec<(f32, f32)>)], marks: &[(f32, String)]) {
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(w, h), egui::Sense::hover());
+    let p = ui.painter_at(rect);
+    let plot = egui::Rect::from_min_max(rect.min + egui::vec2(44.0, 8.0), rect.max - egui::vec2(10.0, 22.0));
+    let ymax = series.iter().flat_map(|s| s.1.iter().map(|q| q.1)).fold(1.0f32, f32::max) * 1.05;
+    let span = (x.1 - x.0).max(1.0);
+    let at = |px: f32, py: f32| egui::pos2(plot.left() + (px - x.0) / span * plot.width(), plot.bottom() - py / ymax * plot.height());
+    let grid = Stroke::new(1.0, CARD);
+    for k in 0..=4 {
+        let v = ymax / 4.0 * k as f32;
+        let y = at(x.0, v).y;
+        p.line_segment([egui::pos2(plot.left(), y), egui::pos2(plot.right(), y)], grid);
+        p.text(egui::pos2(plot.left() - 6.0, y), egui::Align2::RIGHT_CENTER, format!("{}", v.round()), egui::FontId::proportional(11.0), MUTED);
+    }
+    let mut lv = (x.0 / 10.0).ceil() * 10.0;
+    while lv <= x.1 {
+        let px = at(lv, 0.0).x;
+        p.line_segment([egui::pos2(px, plot.top()), egui::pos2(px, plot.bottom())], grid);
+        p.text(egui::pos2(px, plot.bottom() + 4.0), egui::Align2::CENTER_TOP, format!("Lv {lv}"), egui::FontId::proportional(11.0), MUTED);
+        lv += 10.0;
+    }
+    for (mx, name) in marks {
+        let px = at(*mx, 0.0).x;
+        p.line_segment([egui::pos2(px, plot.top()), egui::pos2(px, plot.bottom())], Stroke::new(1.5, Color32::from_rgb(0xff, 0xd0, 0x60)));
+        p.text(egui::pos2(px + 4.0, plot.top() + 2.0), egui::Align2::LEFT_TOP, format!("{name} (Lv {mx})"), egui::FontId::proportional(12.0), Color32::from_rgb(0xff, 0xd0, 0x60));
+    }
+    for (col, pts) in series {
+        let line: Vec<egui::Pos2> = pts.iter().map(|&(a, b)| at(a, b)).collect();
+        p.add(egui::Shape::line(line, Stroke::new(2.0, *col)));
+    }
+}
 
 /// Small colour square for chart legends.
 fn swatch(ui: &mut Ui, col: Color32) {

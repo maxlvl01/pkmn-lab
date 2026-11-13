@@ -9,6 +9,56 @@ pub struct Mon {
     pub level: u8,
     pub moves: Vec<u16>,
     pub nickname: Option<String>,
+    /// everything else the save knows (Gen 4 so far); None for a team entered by hand
+    #[serde(default)]
+    pub details: Option<Details>,
+}
+
+/// One Pokémon's data from the save. Stat arrays use the base-stat order: KP, Angriff, Vert., Sp. Ang., Sp. Ver., Init.
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+pub struct Details {
+    pub nature: u8,
+    pub ivs: [u8; 6],
+    pub evs: [u8; 6],
+    /// stats as the save stores them
+    pub stats: [u16; 6],
+    pub hp_now: u16,
+    pub ability: u16,
+    /// game-internal item id (0 = none)
+    pub item: u16,
+    pub ball: u16,
+    pub friendship: u8,
+    pub exp: u32,
+    pub met_level: u8,
+    /// place id (HGSS place-name list)
+    pub met_place: u16,
+    pub shiny: bool,
+    pub pokerus: u8,
+    pub pp: [u8; 4],
+    pub pp_ups: [u8; 4],
+}
+
+/// Nature effect as (raised, lowered) stat index in base-stat order, None for the five neutral natures.
+pub fn nature_effect(nature: u8) -> Option<(usize, usize)> {
+    // Natures list their stats as Angriff, Vert., Init., Sp. Ang., Sp. Ver.
+    const ORDER: [usize; 5] = [1, 2, 5, 3, 4];
+    let (up, down) = ((nature / 5) as usize % 5, (nature % 5) as usize);
+    (up != down).then(|| (ORDER[up], ORDER[down]))
+}
+
+/// Stats from base stats, DVs, Fleißpunkte, nature and level (Gen 3+ formula).
+pub fn real_stats(base: &[u16; 6], ivs: &[u8; 6], evs: &[u8; 6], nature: u8, level: u8) -> [u16; 6] {
+    let l = level as u32;
+    let mut out = [0u16; 6];
+    for k in 0..6 {
+        let core = (2 * base[k] as u32 + ivs[k] as u32 + evs[k] as u32 / 4) * l / 100;
+        out[k] = if k == 0 { (core + l + 10) as u16 } else { (core + 5) as u16 };
+    }
+    if let Some((up, down)) = nature_effect(nature) {
+        out[up] = (out[up] as u32 * 110 / 100) as u16;
+        out[down] = (out[down] as u32 * 90 / 100) as u16;
+    }
+    out
 }
 
 pub struct Game<'a> {
@@ -748,7 +798,7 @@ mod tests {
     fn rival_follows_your_starter() {
         let boss = |sp: u16| Boss { kind: "rival".into(), name_en: String::new(), name_de: String::new(), type_: None, location_en: None,
             location_de: None, variant: None, team: vec![crate::data::BossMon { dex: sp, level: 5, moves: vec![] }], id: None };
-        let karnimani = [Mon { species: 158, level: 10, moves: vec![], nickname: None }];
+        let karnimani = [Mon { species: 158, level: 10, moves: vec![], nickname: None, details: None }];
         assert!(rival_matches(&karnimani, &boss(152)));  // you: water -> Silber: Endivie
         assert!(!rival_matches(&karnimani, &boss(155)));
         assert!(!rival_matches(&karnimani, &boss(158)));
@@ -764,8 +814,8 @@ mod tests {
         let aqua = dex.find_move("Aquaknarre").unwrap().id;
         let tackle = dex.find_move("Tackle").unwrap().id;
         let team = vec![
-            Mon { species: 74, level: 8, moves: vec![tackle], nickname: None },    // Kleinstein
-            Mon { species: 158, level: 10, moves: vec![aqua], nickname: None },    // Karnimani
+            Mon { species: 74, level: 8, moves: vec![tackle], nickname: None, details: None },    // Kleinstein
+            Mon { species: 158, level: 10, moves: vec![aqua], nickname: None, details: None },    // Karnimani
         ];
         let r = analyse(&dex, &game, &team, None);
         let ground = r.defense.iter().find(|d| d.atk == 5).unwrap();
@@ -793,7 +843,7 @@ mod tests {
         let vg = dex.vg("heartgold-soulsilver").unwrap();
         let learn = dex.learnsets(vg);
         let bosses = dex.bosses.iter().find(|g| g.id == vg.ident).unwrap().bosses.clone();
-        let team = vec![Mon { species: 158, level: 10, moves: vec![], nickname: None }];
+        let team = vec![Mon { species: 158, level: 10, moves: vec![], nickname: None, details: None }];
         let game = Game { vg, bosses: &bosses, badges: &[], learn: &learn, owned_machines: None, regional: true, trainers: &[], beaten: None };
         let r = analyse(&dex, &game, &team, None);
         // Without a ROM: rough order by Johto Pokédex number, never later than the strongest tip's.
@@ -813,7 +863,7 @@ mod tests {
 
     #[test]
     fn uneven_levels_cost_rating() {
-        let mon = |level| Mon { species: 16, level, moves: vec![], nickname: None };
+        let mon = |level| Mon { species: 16, level, moves: vec![], nickname: None, details: None };
         assert_eq!(level_balance(&[mon(20), mon(19), mon(18)]), 1.0);
         let lopsided = level_balance(&[mon(40), mon(10), mon(10), mon(10), mon(10), mon(10)]);
         assert!(lopsided < 0.4, "{lopsided}");

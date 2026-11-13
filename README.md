@@ -20,6 +20,10 @@ You can also start it with files: `pkmn-lab.exe <save> [rom.nds]` (or "Öffnen m
 ## What it shows
 
 - **Team:** each member with sprite, types, base stat total and moves; flags missing STAB or damage moves.
+- **Werte:** spider charts of the team profile (10 axes) and the base stats (each member, team average and team maximum),
+  a duel grid of every member against every boss ahead, and a football-manager style profile per member: nature,
+  ability, item, ball, where it was caught, friendship, EXP, DVs and Fleißpunkte (read from Gen 4 saves), 1–20 attributes,
+  moves with AP, and a stat growth chart to Lv 100 with level evolutions.
 - **Schwächen:** how every attack type hits every member, the biggest weakness, and whether someone hits it back
   super effectively (a counter makes a weakness count less).
 - **Angriff:** your best multiplier against each type and how many members hit it super effectively.

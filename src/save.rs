@@ -144,6 +144,7 @@ fn gen12(d: &[u8]) -> Option<SaveInfo> {
                 level: d[m + level_at],
                 moves: d[m + moves_at..m + moves_at + 4].iter().filter(|&&x| x != 0).map(|&x| x as u16).collect(),
                 nickname: Some(gb_text(&d[nick_at..nick_at + 11])),
+                details: None,
             }
         })
         .collect();
@@ -235,6 +236,7 @@ fn gen3(d: &[u8]) -> Option<SaveInfo> {
                 level: m[0x54],
                 moves: (0..4).map(|k| u16le(&m, 0x2C + 2 * k)).filter(|&x| x != 0).collect(),
                 nickname: Some(gen3_text(&m[8..18])),
+                details: None,
             })
         })
         .collect();
@@ -305,7 +307,39 @@ fn pk_mon(m: &[u8], gen6: bool) -> Option<Mon> {
         level: m[level_at],
         moves: (0..4).map(|k| u16le(m, moves_at + 2 * k)).filter(|&x| x != 0).collect(),
         nickname: None,
+        details: None,
     })
+}
+
+/// Nature, DVs, Fleißpunkte, stats and more from a decrypted PK4 party record (PKHeX PK4 layout).
+fn pk4_details(m: &[u8]) -> crate::analysis::Details {
+    let pid = u32le(m, 0);
+    let iv = u32le(m, 0x38);
+    let ivr = |k: u32| (iv >> (5 * k) & 31) as u8;
+    // The save orders stats KP, Angriff, Vert., Init., Sp. Ang., Sp. Ver.; the tool uses the base-stat order.
+    let ivs = [ivr(0), ivr(1), ivr(2), ivr(4), ivr(5), ivr(3)];
+    let evs = [m[0x18], m[0x19], m[0x1A], m[0x1C], m[0x1D], m[0x1B]];
+    let st = |o: usize| u16le(m, o);
+    let (tid, sid) = (u16le(m, 0x0C) as u32, u16le(m, 0x0E) as u32);
+    let met = if u16le(m, 0x46) != 0 { u16le(m, 0x46) } else { u16le(m, 0x80) };
+    crate::analysis::Details {
+        nature: (pid % 25) as u8,
+        ivs,
+        evs,
+        stats: [st(0x90), st(0x92), st(0x94), st(0x98), st(0x9A), st(0x96)],
+        hp_now: st(0x8E),
+        ability: m[0x15] as u16,
+        item: u16le(m, 0x0A),
+        ball: m[0x83].max(m[0x86]) as u16, // DPPt ball / HGSS ball (Aprikoko balls only in the second)
+        friendship: m[0x14],
+        exp: u32le(m, 0x10),
+        met_level: m[0x84] & 0x7F,
+        met_place: met,
+        shiny: (tid ^ sid ^ (pid >> 16) ^ (pid & 0xFFFF)) < 8,
+        pokerus: m[0x82],
+        pp: [m[0x30], m[0x31], m[0x32], m[0x33]],
+        pp_ups: [m[0x34], m[0x35], m[0x36], m[0x37]],
+    }
 }
 
 fn gen4(d: &[u8]) -> Option<SaveInfo> {
@@ -336,6 +370,7 @@ fn gen4(d: &[u8]) -> Option<SaveInfo> {
             let m = decrypt_pk(&gd[o..o + 236], 32);
             let mut mon = pk_mon(&m, false)?;
             mon.nickname = Some(gen4_text(u16s(&m, 0x48, 11)));
+            mon.details = Some(pk4_details(&m));
             Some(mon)
         })
         .collect();
@@ -445,5 +480,21 @@ mod tests {
     #[test]
     fn rle() {
         assert_eq!(unrle(&[2, 7, 8, 0x83, 9, 0x80, 1, 2, 0, 0], 7).unwrap(), vec![7, 8, 9, 9, 9, 1, 1]);
+    }
+
+    /// Needs a real Gen 4 save; set PKMN_SAVE to its path, otherwise the test is skipped.
+    #[test]
+    fn pk4_details_match_stored_stats() {
+        let Ok(path) = std::env::var("PKMN_SAVE") else { return };
+        let dex = crate::data::Dex::load();
+        let info = read(&std::fs::read(path).unwrap(), &dex).unwrap();
+        assert!(!info.team.is_empty());
+        for m in &info.team {
+            let d = m.details.as_ref().unwrap();
+            let base = &dex.species[&m.species].base_stats;
+            assert_eq!(crate::analysis::real_stats(base, &d.ivs, &d.evs, d.nature, m.level), d.stats, "{:?} {:?}", m.nickname, d);
+            assert!(d.exp >= crate::data::exp_at(dex.species[&m.species].growth, m.level));
+            assert!(d.exp < crate::data::exp_at(dex.species[&m.species].growth, m.level + 1));
+        }
     }
 }
