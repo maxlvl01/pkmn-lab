@@ -51,7 +51,28 @@ pub struct Report {
     pub beaten_bosses: Vec<BossView>,
     /// every other trainer, sorted by their top level
     pub trainers: Vec<BossView>,
+    pub comp: Composition,
 }
+
+/// Team composition for the Werte tab: radar axes (0..1) and the numbers behind them.
+pub struct Composition {
+    pub axes: Vec<(Axis, f32)>,
+    /// 1.0 = everyone near the top level
+    pub level_balance: f32,
+    /// rating points taken off for uneven levels
+    pub level_penalty: u32,
+    /// damaging moves by class as they work in this game, and status moves
+    pub physical: u32,
+    pub special: u32,
+    pub status: u32,
+    /// how many members have each type
+    pub type_counts: Vec<(u8, u32)>,
+    /// team average of each base stat
+    pub avg_base: [f32; 6],
+}
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum Axis { Offense, Defense, Levels, PhysSpec, Speed, Bulk, Power, Stab, Variety, Size }
 
 pub struct MemberView {
     pub types: Vec<u8>,
@@ -303,7 +324,9 @@ pub fn analyse(dex: &Dex, game: &Game, team: &[Mon], focus: Option<usize>) -> Re
         hitters: fighters.iter().filter(|f| best_hit(dex, f, &[d], gn).0 >= 2.0).count(),
     }).collect();
 
-    let now = summarize(dex, &fighters, gn);
+    let mut now = summarize(dex, &fighters, gn);
+    let comp = composition(dex, game, team, &now);
+    now.rating = now.rating.saturating_sub(comp.level_penalty);
     let ahead = remaining(game);
     let done: Vec<usize> = (0..game.bosses.len()).filter(|i| !ahead.contains(i) && !game.bosses[*i].team.is_empty()).collect();
     // Future potential: the team as it can be by the last boss ahead (evolved, its best moves by then).
@@ -327,6 +350,65 @@ pub fn analyse(dex: &Dex, game: &Game, team: &[Mon], focus: Option<usize>) -> Re
         bosses: bosses(dex, game, team, &ahead, false),
         beaten_bosses: bosses(dex, game, team, &done, true),
         trainers: trainers(dex, game, team),
+        comp,
+    }
+}
+
+/// 1.0 when every member is close to the strongest one; a starter at 40 with the rest at 10 gives about 0.35.
+/// The first 10 % gap is free, since a few levels apart is normal while training.
+pub fn level_balance(team: &[Mon]) -> f32 {
+    let top = team.iter().map(|m| m.level).max().unwrap_or(1).max(1) as f32;
+    if team.len() < 2 { return 1.0; }
+    let gap: f32 = team.iter().map(|m| ((top - m.level as f32) / top - 0.1).clamp(0.0, 1.0)).sum::<f32>() / (team.len() - 1) as f32;
+    1.0 - gap
+}
+
+fn composition(dex: &Dex, game: &Game, team: &[Mon], now: &Summary) -> Composition {
+    let (vg, gn) = (game.vg, game.vg.gn);
+    let n = team.len().max(1) as f32;
+    let species: Vec<&crate::data::Species> = team.iter().filter_map(|m| dex.species.get(&m.species)).collect();
+    let mut avg_base = [0f32; 6];
+    for s in &species { for k in 0..6 { avg_base[k] += s.base_stats[k] as f32 / n; } }
+    // Before Gen 4 the move's type decides physical or special.
+    let special_type = |t: u8| matches!(t, 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17);
+    let (mut physical, mut special, mut status, mut stab) = (0u32, 0u32, 0u32, 0f32);
+    let mut type_counts: BTreeMap<u8, u32> = BTreeMap::new();
+    for m in team {
+        let Some(s) = dex.species.get(&m.species) else { continue };
+        let types = dex.species_types(s, gn);
+        for &t in &types { *type_counts.entry(t).or_default() += 1; }
+        let mut has_stab = false;
+        for mv in m.moves.iter().filter_map(|id| dex.moves.get(id)) {
+            let (t, p) = dex.move_stats(mv, vg);
+            if mv.class == 1 || p.is_none() { status += 1; continue; }
+            let is_special = if gn <= 3 { special_type(t) } else { mv.class == 3 };
+            if is_special { special += 1 } else { physical += 1 }
+            has_stab |= types.contains(&t);
+        }
+        if has_stab { stab += 1.0; }
+    }
+    let balance = level_balance(team);
+    let ps = if physical + special == 0 { 0.0 } else { 1.0 - (physical as f32 - special as f32).abs() / (physical + special) as f32 };
+    let distinct = type_counts.len() as f32;
+    let axes = vec![
+        (Axis::Offense, now.offense_pct as f32 / 100.0),
+        (Axis::Defense, now.defense_pct as f32 / 100.0),
+        (Axis::Levels, balance),
+        (Axis::PhysSpec, ps),
+        (Axis::Speed, (avg_base[5] / 110.0).min(1.0)),
+        (Axis::Bulk, ((avg_base[0] + avg_base[2] + avg_base[4]) / 300.0).min(1.0)),
+        (Axis::Power, (species.iter().map(|s| s.base_stats[1].max(s.base_stats[3]) as f32).sum::<f32>() / n / 120.0).min(1.0)),
+        (Axis::Stab, stab / n),
+        (Axis::Variety, (distinct / (n * 1.5).max(1.0)).min(1.0)),
+        (Axis::Size, (team.len() as f32 / 6.0).min(1.0)),
+    ];
+    Composition {
+        axes,
+        level_balance: balance,
+        level_penalty: ((1.0 - balance) * 25.0).round() as u32,
+        physical, special, status,
+        type_counts: type_counts.into_iter().collect(),
+        avg_base,
     }
 }
 
@@ -727,5 +809,14 @@ mod tests {
         let r = analyse(&dex, &game, &team, None);
         let p = r.next_pick.unwrap();
         assert!(p.spot.is_some_and(|(_, s)| !s.late()), "{}", p.species);
+    }
+
+    #[test]
+    fn uneven_levels_cost_rating() {
+        let mon = |level| Mon { species: 16, level, moves: vec![], nickname: None };
+        assert_eq!(level_balance(&[mon(20), mon(19), mon(18)]), 1.0);
+        let lopsided = level_balance(&[mon(40), mon(10), mon(10), mon(10), mon(10), mon(10)]);
+        assert!(lopsided < 0.4, "{lopsided}");
+        assert!(level_balance(&[mon(13), mon(11), mon(10), mon(8), mon(7)]) > 0.75);
     }
 }

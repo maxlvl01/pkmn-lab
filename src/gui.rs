@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone, Copy, PartialEq)]
-enum Tab { Team, Defense, Offense, Projection, Catch, Bosses, Trainers }
+enum Tab { Team, Stats, Defense, Offense, Projection, Catch, Bosses, Trainers }
 
 /// What survives a restart.
 #[derive(serde::Serialize, serde::Deserialize, Default)]
@@ -626,12 +626,17 @@ impl App {
                 ui.vertical(|ui| {
                     ui.label(RichText::new(t(l, "Team rating", "Team-Bewertung")).size(18.0).strong());
                     ui.label(RichText::new(format!("{} {}  ·  {} {} (Lv {})", t(l, "Now", "Jetzt"), r.rating_now, t(l, "Potential", "Potenzial"), r.potential, r.potential_level)).color(MUTED))
-                        .on_hover_text(t(l, "Rating = 60 % today's team + 40 % its potential: evolved, at the level of the last boss ahead, with its best moves by then.",
-                            "Bewertung = 60 % heutiges Team + 40 % Potenzial: entwickelt, auf dem Level des letzten Bosses, mit den besten Attacken bis dahin."));
+                        .on_hover_text(t(l, "Rating = 60 % today's team + 40 % its potential: evolved, at the level of the last boss ahead, with its best moves by then. Today's team loses up to 25 points when its levels are uneven.",
+                            "Bewertung = 60 % heutiges Team + 40 % Potenzial: entwickelt, auf dem Level des letzten Bosses, mit den besten Attacken bis dahin. Das heutige Team verliert bis zu 25 Punkte, wenn die Level ungleich sind."));
                     ui.add(egui::ProgressBar::new(r.summary.offense_pct as f32 / 100.0).desired_width(230.0).fill(bar_color(r.summary.offense_pct))
                         .text(format!("{} {}%", t(l, "Offensive coverage", "Angriffs-Abdeckung"), r.summary.offense_pct)));
                     ui.add(egui::ProgressBar::new(r.summary.defense_pct as f32 / 100.0).desired_width(230.0).fill(bar_color(r.summary.defense_pct))
                         .text(format!("{} {}%", t(l, "Types handled", "Typen im Griff"), r.summary.defense_pct)));
+                    let bal = (r.comp.level_balance * 100.0).round() as u32;
+                    ui.add(egui::ProgressBar::new(r.comp.level_balance).desired_width(230.0).fill(bar_color(bal))
+                        .text(format!("{} {bal}%", t(l, "Level balance", "Level-Balance"))))
+                        .on_hover_text(format!("{} −{} {}", t(l, "Uneven levels cost", "Ungleiche Level kosten"), r.comp.level_penalty,
+                            t(l, "points of today's rating.", "Punkte der heutigen Bewertung.")));
                 });
                 ui.add_space(16.0);
                 ui.vertical(|ui| {
@@ -673,6 +678,123 @@ impl App {
             Verdict::Even => pill(ui, t(l, "Even fight", "Ausgeglichen"), OKAY),
             Verdict::Struggle => pill(ui, t(l, "Tough", "Wird schwer"), BAD),
         }
+    }
+
+    fn tab_stats(&self, ui: &mut Ui, r: &Report) {
+        use analysis::Axis::*;
+        let l = self.lang;
+        let c = &r.comp;
+        let axis_text = |a: analysis::Axis| -> (&'static str, &'static str) {
+            match a {
+                Offense => (t(l, "Coverage", "Angriffs-Abdeckung"), t(l, "Types your moves hit super effectively.", "Typen, die deine Attacken sehr effektiv treffen.")),
+                Defense => (t(l, "Types handled", "Typen im Griff"), t(l, "Attack types your team resists or answers.", "Angriffstypen, die dein Team abwehrt oder kontert.")),
+                Levels => (t(l, "Level balance", "Level-Balance"), t(l, "How close everyone is to your strongest member.", "Wie nah alle an deinem stärksten Pokémon sind.")),
+                PhysSpec => (t(l, "Phys./Spec. mix", "Physisch/Spezial"), t(l, "Even mix of physical and special attacks: walls can't stop you with one stat.", "Ausgewogene physische und spezielle Attacken: eine Mauer stoppt dich nicht mit einem Wert.")),
+                Speed => (t(l, "Speed", "Tempo"), t(l, "Average base Init.; 110 counts as full.", "Durchschnittlicher Basiswert Init.; 110 zählt voll.")),
+                Bulk => (t(l, "Bulk", "Robustheit"), t(l, "Average base KP + Vert. + Sp. Ver.; 300 counts as full.", "Durchschnitt Basis-KP + Vert. + Sp. Ver.; 300 zählt voll.")),
+                Power => (t(l, "Hitting power", "Angriffskraft"), t(l, "Average of each member's better attack stat; 120 counts as full.", "Durchschnitt des besseren Angriffswerts jedes Mitglieds; 120 zählt voll.")),
+                Stab => (t(l, "STAB moves", "STAB-Attacken"), t(l, "Members with a damaging move of their own type (1.5x damage).", "Mitglieder mit einer Schadensattacke ihres eigenen Typs (1,5-facher Schaden).")),
+                Variety => (t(l, "Type variety", "Typ-Vielfalt"), t(l, "Different types in the team.", "Verschiedene Typen im Team.")),
+                Size => (t(l, "Team size", "Teamgröße"), t(l, "Members out of 6.", "Mitglieder von 6.")),
+            }
+        };
+        let wide = ui.available_width() > 1200.0;
+        let size = 300.0;
+        let profile = |ui: &mut Ui| {
+            card(ui, |ui| {
+                ui.label(RichText::new(t(l, "Team profile", "Team-Profil")).size(17.0).strong());
+                let labels: Vec<String> = c.axes.iter().map(|&(a, v)| format!("{} {}%", axis_text(a).0, (v * 100.0).round())).collect();
+                radar(ui, size, &labels, &[(ACCENT, c.axes.iter().map(|a| a.1).collect())]);
+            });
+        };
+        let bases = |ui: &mut Ui| {
+            card(ui, |ui| {
+                ui.label(RichText::new(t(l, "Base stats (150 = edge)", "Basiswerte (150 = Rand)")).size(17.0).strong());
+                let labels: Vec<String> = stat_short(l).iter().enumerate().map(|(k, n)| format!("{n} {}", c.avg_base[k].round())).collect();
+                let mut series: Vec<(Color32, Vec<f32>)> = self.team.iter().enumerate().filter_map(|(i, m)| {
+                    let s = self.dex.species.get(&m.species)?;
+                    Some((MEMBER_COLORS[i % 6].gamma_multiply(0.7), s.base_stats.iter().map(|&b| b as f32 / 150.0).collect()))
+                }).collect();
+                series.push((Color32::WHITE, c.avg_base.iter().map(|&b| b / 150.0).collect()));
+                radar(ui, size, &labels, &series);
+                ui.horizontal_wrapped(|ui| {
+                    for (i, m) in self.team.iter().enumerate() {
+                        swatch(ui, MEMBER_COLORS[i % 6]);
+                        ui.label(RichText::new(self.sname(m.species)).small());
+                    }
+                    swatch(ui, Color32::WHITE);
+                    ui.label(RichText::new(t(l, "team average (numbers)", "Team-Durchschnitt (Zahlen)")).small());
+                });
+            });
+        };
+        if wide {
+            ui.horizontal_top(|ui| { profile(ui); ui.add_space(8.0); bases(ui); });
+        } else {
+            profile(ui);
+            ui.add_space(8.0);
+            bases(ui);
+        }
+        ui.add_space(8.0);
+        // What each axis means, with its value.
+        card(ui, |ui| {
+            ui.label(RichText::new(t(l, "What the profile means", "Was das Profil bedeutet")).size(17.0).strong());
+            egui::Grid::new("axes").spacing([12.0, 4.0]).show(ui, |ui| {
+                for &(a, v) in &c.axes {
+                    let pct = (v * 100.0).round() as u32;
+                    ui.label(RichText::new(axis_text(a).0).strong());
+                    ui.add(egui::ProgressBar::new(v).desired_width(160.0).fill(bar_color(pct)).text(format!("{pct}%")));
+                    ui.label(RichText::new(axis_text(a).1).color(MUTED));
+                    ui.end_row();
+                }
+            });
+            ui.add_space(4.0);
+            ui.label(format!("{}: {} {}, {} {}, {} {}", t(l, "Moves", "Attacken"), c.physical, t(l, "physical", "physisch"),
+                c.special, t(l, "special", "speziell"), c.status, t(l, "status", "Status")));
+            if c.level_penalty > 0 {
+                ui.label(RichText::new(format!("{} −{} {}", t(l, "Uneven levels cost", "Ungleiche Level kosten"), c.level_penalty,
+                    t(l, "points of today's rating.", "Punkte der heutigen Bewertung."))).color(OKAY));
+            }
+            ui.horizontal_wrapped(|ui| {
+                ui.label(RichText::new(t(l, "Types in the team:", "Typen im Team:")).color(MUTED));
+                for &(ty, n) in &c.type_counts {
+                    self.type_badge(ui, ty);
+                    if n > 1 { ui.label(RichText::new(format!("×{n}")).strong().color(if n >= 3 { BAD } else { OKAY })); }
+                }
+            });
+        });
+        ui.add_space(8.0);
+        // Every member in numbers: stats at its level (estimate), base stat total and role.
+        card(ui, |ui| {
+            ui.label(RichText::new(t(l, "Members", "Mitglieder")).size(17.0).strong());
+            ui.label(RichText::new(t(l, "Stats at the current level, estimated with average IVs, no EVs and a neutral nature.",
+                "Werte auf dem aktuellen Level, geschätzt mit durchschnittlichen DVs, ohne Fleißpunkte und mit neutralem Wesen.")).color(MUTED).small());
+            egui::Grid::new("members").striped(true).spacing([14.0, 6.0]).show(ui, |ui| {
+                ui.label("");
+                ui.label("");
+                for n in stat_short(l) { ui.label(RichText::new(n).color(MUTED)); }
+                ui.label(RichText::new(t(l, "Base total", "Basis-Summe")).color(MUTED));
+                ui.label(RichText::new(t(l, "Role", "Rolle")).color(MUTED));
+                ui.end_row();
+                for (i, m) in self.team.iter().enumerate() {
+                    let Some(s) = self.dex.species.get(&m.species) else { continue };
+                    let stats = analysis::stats_at(&s.base_stats, m.level);
+                    ui.horizontal(|ui| {
+                        swatch(ui, MEMBER_COLORS[i % 6]);
+                        self.species_sprite(ui, m.species, 40.0);
+                        ui.label(RichText::new(self.sname(m.species)).strong());
+                    });
+                    ui.label(format!("Lv {}", m.level));
+                    let top = (0..6).max_by_key(|&k| s.base_stats[k]).unwrap_or(0);
+                    for (k, v) in stats.iter().enumerate() {
+                        let txt = RichText::new(v.to_string());
+                        ui.label(if k == top { txt.strong().color(GOOD) } else { txt });
+                    }
+                    ui.label(s.base_stats.iter().sum::<u16>().to_string());
+                    ui.label(role(&s.base_stats, l));
+                    ui.end_row();
+                }
+            });
+        });
     }
 
     fn tab_team(&self, ui: &mut Ui, r: &Report) {
@@ -1276,7 +1398,7 @@ impl eframe::App for App {
             ui.add_space(8.0);
             ui.horizontal(|ui| {
                 for (tab, en, de) in [
-                    (Tab::Team, "Team", "Team"), (Tab::Defense, "Weaknesses", "Schwächen"), (Tab::Offense, "Attack", "Angriff"),
+                    (Tab::Team, "Team", "Team"), (Tab::Stats, "Stats", "Werte"), (Tab::Defense, "Weaknesses", "Schwächen"), (Tab::Offense, "Attack", "Angriff"),
                     (Tab::Projection, "Projection", "Projektion"), (Tab::Catch, "Catch next", "Fangen"), (Tab::Bosses, "Bosses", "Bosse"), (Tab::Trainers, "Trainers", "Trainer"),
                 ] {
                     let selected = self.tab == tab;
@@ -1289,6 +1411,7 @@ impl eframe::App for App {
             ui.add_space(8.0);
             egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| match self.tab {
                 Tab::Team => self.tab_team(ui, &r),
+                Tab::Stats => self.tab_stats(ui, &r),
                 Tab::Defense => self.tab_defense(ui, &r),
                 Tab::Offense => self.tab_offense(ui, &r),
                 Tab::Projection => self.tab_projection(ui, &r),
@@ -1323,6 +1446,71 @@ impl eframe::App for App {
     }
 }
 
+/// Short stat names as the German SoulSilver summary screen writes them (ROM text a/0/2/7, files 31 and 302).
+fn stat_short(l: Lang) -> [&'static str; 6] {
+    if l == Lang::De { ["KP", "Angriff", "Vert.", "Sp. Ang.", "Sp. Ver.", "Init."] } else { ["HP", "Atk", "Def", "SpA", "SpD", "Spe"] }
+}
+
+const MEMBER_COLORS: [Color32; 6] = [
+    Color32::from_rgb(0xe8, 0x4a, 0x4a), Color32::from_rgb(0x3d, 0x9b, 0xe8), Color32::from_rgb(0x4c, 0xc2, 0x7a),
+    Color32::from_rgb(0xf0, 0xb9, 0x3a), Color32::from_rgb(0xb0, 0x6a, 0xe0), Color32::from_rgb(0x3a, 0xd0, 0xc8),
+];
+
+/// Small colour square for chart legends.
+fn swatch(ui: &mut Ui, col: Color32) {
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(12.0, 12.0), egui::Sense::hover());
+    ui.painter().rect_filled(rect.shrink(1.0), 2.0, col);
+}
+
+/// A rough role from the base stats (the tool's own wording, not a game term).
+fn role(b: &[u16; 6], l: Lang) -> &'static str {
+    let (atk, def, spa, spd, spe, hp) = (b[1] as f32, b[2] as f32, b[3] as f32, b[4] as f32, b[5] as f32, b[0] as f32);
+    if hp + def + spd > 1.15 * (atk + spa + spe) { return t(l, "Wall", "Verteidiger"); }
+    let kind = if atk > spa * 1.2 { 1 } else if spa > atk * 1.2 { 2 } else { 0 };
+    match (spe >= 90.0 && atk.max(spa) >= 80.0, kind) {
+        (true, 1) => t(l, "Fast physical attacker", "Schneller physischer Angreifer"),
+        (true, 2) => t(l, "Fast special attacker", "Schneller spezieller Angreifer"),
+        (true, _) => t(l, "Fast all-rounder", "Schneller Allrounder"),
+        (false, 1) => t(l, "Physical attacker", "Physischer Angreifer"),
+        (false, 2) => t(l, "Special attacker", "Spezieller Angreifer"),
+        _ => t(l, "All-rounder", "Allrounder"),
+    }
+}
+
+/// Spider-web chart: one spoke per label, values 0..1, each series as a filled outline.
+fn radar(ui: &mut Ui, size: f32, labels: &[String], series: &[(Color32, Vec<f32>)]) {
+    use std::f32::consts::{FRAC_PI_2, TAU};
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(size * 1.7, size * 1.15), egui::Sense::hover());
+    let p = ui.painter_at(rect);
+    let (c, r, n) = (rect.center(), size * 0.4, labels.len());
+    let pt = |i: usize, v: f32| {
+        let a = -FRAC_PI_2 + TAU * i as f32 / n as f32;
+        c + egui::vec2(a.cos(), a.sin()) * r * v
+    };
+    let grid = Stroke::new(1.0, CARD_HI);
+    for ring in [0.25, 0.5, 0.75, 1.0] {
+        p.add(egui::Shape::closed_line((0..n).map(|i| pt(i, ring)).collect(), grid));
+    }
+    for (i, label) in labels.iter().enumerate() {
+        p.line_segment([c, pt(i, 1.0)], grid);
+        let lp = pt(i, 1.1);
+        let align = if (lp.x - c.x).abs() < 6.0 { egui::Align2::CENTER_CENTER } else if lp.x > c.x { egui::Align2::LEFT_CENTER } else { egui::Align2::RIGHT_CENTER };
+        p.text(lp, align, label, egui::FontId::proportional(13.0), MUTED);
+    }
+    for (col, vals) in series {
+        let pts: Vec<egui::Pos2> = vals.iter().enumerate().map(|(i, &v)| pt(i, v.clamp(0.0, 1.0))).collect();
+        // Fan from the centre: fills the (often non-convex) web shape correctly.
+        let mut mesh = egui::Mesh::default();
+        let fill = col.gamma_multiply(0.22);
+        mesh.colored_vertex(c, fill);
+        for q in &pts { mesh.colored_vertex(*q, fill); }
+        for i in 0..n { mesh.add_triangle(0, 1 + i as u32, 1 + ((i + 1) % n) as u32); }
+        p.add(egui::Shape::mesh(mesh));
+        p.add(egui::Shape::closed_line(pts.clone(), Stroke::new(2.0, *col)));
+        for q in pts { p.circle_filled(q, 3.0, *col); }
+    }
+}
+
 /// Placeholder portrait for a hidden trainer: a dark disc with a question mark.
 fn mystery(ui: &mut Ui, size: f32) {
     let (rect, _) = ui.allocate_exact_size(egui::vec2(size, size), egui::Sense::hover());
@@ -1343,8 +1531,7 @@ fn card_rows<T>(ui: &mut Ui, items: &[T], width: f32, mut add: impl FnMut(&mut U
 
 /// Six small stat bars (scale: 255 at Lv 100 is the top of the bar range).
 fn stat_bars(ui: &mut Ui, stats: &[u16; 6], l: Lang) {
-    // shortcut: German short stat names as commonly written; not checked against the ROM's text.
-    let names = if l == Lang::De { ["KP", "Angr.", "Vert.", "Sp.-Angr.", "Sp.-Vert.", "Init."] } else { ["HP", "Atk", "Def", "SpA", "SpD", "Spe"] };
+    let names = stat_short(l);
     let max = stats.iter().copied().max().unwrap_or(1).max(1) as f32;
     egui::Grid::new(ui.next_auto_id()).spacing([6.0, 2.0]).show(ui, |ui| {
         for (i, &v) in stats.iter().enumerate() {
