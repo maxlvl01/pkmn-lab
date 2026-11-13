@@ -362,6 +362,17 @@ pub struct Learnsets {
     pub machine: HashMap<u16, Vec<u16>>,
     /// move id -> machine number as PokeAPI numbers it
     pub machine_no: HashMap<u16, u16>,
+    /// species -> what it can evolve into, and how
+    pub evolutions: HashMap<u16, Vec<(u16, EvoHow)>>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum EvoHow {
+    Level(u8),
+    Friendship,
+    Item,
+    Trade,
+    Other,
 }
 
 /// Minimal CSV scan for the big learnset file (the generic `rows` is too slow for ~600k lines).
@@ -378,7 +389,7 @@ fn scan<'a>(text: &'a str, cols: &[&str]) -> impl Iterator<Item = Vec<&'a str>> 
 impl Dex {
     pub fn learnsets(&self, vg: &VersionGroup) -> Learnsets {
         let vg_id = vg.id.to_string();
-        let mut ls = Learnsets { level_up: HashMap::new(), machine: HashMap::new(), machine_no: HashMap::new() };
+        let mut ls = Learnsets::default();
         for f in scan(csv_file!("pokemon_moves"), &["pokemon_id", "version_group_id", "move_id", "pokemon_move_method_id", "level"]) {
             if f[1] != vg_id { continue; }
             let (Ok(sp), Ok(mv)) = (f[0].parse::<u16>(), f[2].parse::<u16>()) else { continue };
@@ -392,6 +403,26 @@ impl Dex {
             if f[1] == vg_id {
                 if let (Ok(n), Ok(mv)) = (f[0].parse(), f[2].parse()) { ls.machine_no.insert(mv, n); }
             }
+        }
+        let from: HashMap<u16, u16> = scan(csv_file!("pokemon_species"), &["id", "evolves_from_species_id"])
+            .filter_map(|f| Some((f[0].parse().ok()?, f[1].parse().ok()?)))
+            .collect();
+        let cols = ["evolved_species_id", "evolution_trigger_id", "minimum_level", "required_pokemon_form_id"];
+        for f in scan(csv_file!("pokemon_evolution"), &cols) {
+            // Regional forms (form ids 10000+) evolve differently; the plain species is what older games have.
+            if f[3].parse::<u32>().is_ok_and(|x| x >= 10000) { continue; }
+            let Ok(to) = f[0].parse::<u16>() else { continue };
+            let Some(&pre) = from.get(&to) else { continue };
+            if self.species.get(&to).is_none_or(|s| s.gn > vg.gn) { continue; }
+            let how = match (f[1], f[2].parse::<u8>()) {
+                ("1", Ok(l)) => EvoHow::Level(l),
+                ("1", _) => EvoHow::Friendship, // shortcut: level-up without a level is mostly friendship; also time/place ones
+                ("2", _) => EvoHow::Trade,
+                ("3", _) => EvoHow::Item,
+                _ => EvoHow::Other,
+            };
+            let list = ls.evolutions.entry(pre).or_default();
+            if !list.iter().any(|e| e.0 == to) { list.push((to, how)); }
         }
         ls
     }

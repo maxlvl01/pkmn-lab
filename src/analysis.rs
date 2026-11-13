@@ -1,6 +1,6 @@
 //! Team analysis: type matchups, coverage, rating, projection, recommendations, boss matchups.
 //! Returns plain data (ids, numbers); the UI turns it into German or English text.
-use crate::data::{Boss, Dex, Learnsets, Move, VersionGroup};
+use crate::data::{Boss, Dex, EvoHow, Learnsets, Move, VersionGroup};
 use std::collections::{BTreeMap, HashSet};
 
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
@@ -76,7 +76,19 @@ pub enum Source {
     Machine(u16),
 }
 
+/// A member as it will be at the projected level.
+pub struct Growth {
+    pub species: u16,
+    pub level: u8,
+    /// (new species, at level) in order
+    pub evolved: Vec<(u16, u8)>,
+    /// further evolutions that need something other than a level
+    pub could: Vec<(u16, EvoHow)>,
+    pub stats: [u16; 6],
+}
+
 pub struct ProjMember {
+    pub growth: Growth,
     pub learns: Vec<(u8, u16)>,
     pub picks: Vec<(u16, Source)>,
     /// (machine number, move id) worth getting
@@ -121,6 +133,8 @@ pub struct BossView {
     pub boss: usize,
     pub verdict: Verdict,
     pub their_max: u8,
+    /// our team as projected for this fight: (species, level) per member
+    pub team: Vec<(u16, u8)>,
     pub mons: Vec<BossMonView>,
 }
 
@@ -208,7 +222,7 @@ fn remaining(game: &Game) -> Vec<usize> {
         .collect()
 }
 
-pub fn analyse(dex: &Dex, game: &Game, team: &[Mon]) -> Report {
+pub fn analyse(dex: &Dex, game: &Game, team: &[Mon], focus: Option<usize>) -> Report {
     let vg = game.vg;
     let gn = vg.gn;
     let fighters: Vec<Fighter> = team.iter().map(|m| fighter(dex, vg, m.species, &m.moves)).collect();
@@ -269,9 +283,9 @@ pub fn analyse(dex: &Dex, game: &Game, team: &[Mon]) -> Report {
         also_countered,
         offense,
         summary,
-        projection: project(dex, game, team, &fighters, &ahead),
+        projection: project(dex, game, team, &ahead, focus),
         catch: recommend(dex, gn, &fighters),
-        bosses: bosses(dex, game, team, &fighters, &ahead),
+        bosses: bosses(dex, game, team, &ahead),
     }
 }
 
@@ -307,11 +321,147 @@ fn recommend(dex: &Dex, gn: u8, fighters: &[Fighter]) -> Vec<CatchRec> {
     out
 }
 
-fn bosses(dex: &Dex, game: &Game, team: &[Mon], fighters: &[Fighter], ahead: &[usize]) -> Vec<BossView> {
+/// Stats at a level: average IVs (15), no EVs, neutral nature.
+/// shortcut: Gen 1/2 used DVs and stat experience; the same estimate is close enough for comparing teams.
+pub fn stats_at(base: &[u16; 6], level: u8) -> [u16; 6] {
+    let l = level as u32;
+    let mut out = [0u16; 6];
+    for (i, &b) in base.iter().enumerate() {
+        let core = (2 * b as u32 + 15) * l / 100;
+        out[i] = (if i == 0 { core + l + 10 } else { core + 5 }) as u16;
+    }
+    out
+}
+
+fn stat_total(dex: &Dex, species: u16, level: u8) -> f32 {
+    dex.species.get(&species).map_or(0.0, |s| stats_at(&s.base_stats, level).iter().map(|&x| x as f32).sum())
+}
+
+/// What the member turns into by `level`: level evolutions happen, the rest (stones, trade, friendship) are options.
+fn grow(game: &Game, species: u16, from: u8, level: u8) -> (Growth, Vec<(u16, u8, u8)>) {
+    let mut stages = vec![];
+    let mut evolved = vec![];
+    let (mut cur, mut start) = (species, from);
+    loop {
+        let evos = game.learn.evolutions.get(&cur).map(Vec::as_slice).unwrap_or(&[]);
+        let next = evos.iter().find_map(|&(to, how)| match how {
+            EvoHow::Level(l) if l <= level => Some((to, l.max(start))),
+            _ => None,
+        });
+        match next {
+            // A stage covers the levels it is held at: (species, first level, last level).
+            Some((to, at)) if evolved.len() < 3 => {
+                stages.push((cur, start, at));
+                evolved.push((to, at));
+                cur = to;
+                start = at;
+            }
+            _ => {
+                stages.push((cur, start, level));
+                let could = evos.iter().copied().filter(|e| !matches!(e.1, EvoHow::Level(_))).collect();
+                return (Growth { species: cur, level, evolved, could, stats: [0; 6] }, stages);
+            }
+        }
+    }
+}
+
+/// What moves are scored against: every type once, the Pokémon of the given bosses three times.
+fn targets(dex: &Dex, game: &Game, bosses: &[usize]) -> Vec<(Vec<u8>, f32)> {
     let gn = game.vg.gn;
-    let our_max = team.iter().map(|m| m.level).max().unwrap_or(1) as i32;
+    let mut t: Vec<(Vec<u8>, f32)> = dex.types_in_gen(gn).into_iter().map(|x| (vec![x], 1.0)).collect();
+    for &bi in bosses {
+        for bm in &game.bosses[bi].team {
+            if let Some(s) = dex.species.get(&bm.dex) { t.push((dex.species_types(s, gn), 3.0)); }
+        }
+    }
+    t
+}
+
+/// One member raised to `level`: evolutions, the moves it can have by then, and the best 4 against `targets`.
+fn plan(dex: &Dex, game: &Game, m: &Mon, level: u8, targets: &[(Vec<u8>, f32)]) -> (ProjMember, Fighter) {
+    let vg = game.vg;
+    let gn = vg.gn;
+    let (mut growth, stages) = grow(game, m.species, m.level, level.max(m.level));
+    let sp = dex.species.get(&growth.species).or(dex.species.get(&m.species)).expect("species");
+    growth.stats = stats_at(&sp.base_stats, growth.level);
+    let types = dex.species_types(sp, gn);
+    let set_value = |set: &[(u8, f32)]| -> f32 {
+        targets.iter().map(|(ty, w)| w * set.iter().map(|&(mt, v)| dex.eff(mt, ty, gn) * v).fold(0.0, f32::max)).sum()
+    };
+
+    let mut cands: Vec<(u16, Source)> = m.moves.iter().map(|&id| (id, Source::Known)).collect();
+    let mut learns = vec![];
+    for (k, &(stage_sp, first, last)) in stages.iter().enumerate() {
+        for &(lv, id) in game.learn.level_up.get(&stage_sp).into_iter().flatten() {
+            // The first form could also relearn older moves; an evolved form only learns from its evolution level on.
+            let reachable = lv <= last && (k == 0 || lv > first);
+            if !reachable { continue; }
+            if lv > m.level && !learns.contains(&(lv, id)) { learns.push((lv, id)); }
+            if lv >= 1 && !cands.iter().any(|c| c.0 == id) { cands.push((id, Source::Level(lv))); }
+        }
+    }
+    learns.sort();
+    let mut machine_options: Vec<(u16, u16)> = vec![];
+    for &id in game.learn.machine.get(&growth.species).into_iter().flatten() {
+        let Some(&n) = game.learn.machine_no.get(&id) else { continue };
+        if cands.iter().any(|c| c.0 == id) { continue; }
+        match game.owned_machines {
+            Some(o) if o.contains(&id) => cands.push((id, Source::Machine(n))),
+            _ => machine_options.push((n, id)),
+        }
+    }
+    // Greedy: add the move that raises the set's value most; stop under 2 % (coverage moves matter even when weak).
+    let valued: Vec<(usize, (u8, f32))> = cands.iter().enumerate()
+        .filter_map(|(i, (id, _))| Some((i, move_value(dex, vg, &types, &sp.base_stats, dex.moves.get(id)?)?)))
+        .collect();
+    let value_of = |i: usize| valued.iter().find(|v| v.0 == i).unwrap().1;
+    let mut chosen: Vec<usize> = vec![];
+    while chosen.len() < 4 {
+        let cur: Vec<(u8, f32)> = chosen.iter().map(|&i| value_of(i)).collect();
+        let base = set_value(&cur);
+        let best = valued.iter().filter(|v| !chosen.contains(&v.0))
+            .map(|v| { let mut s = cur.clone(); s.push(v.1); (v.0, set_value(&s) - base) })
+            .max_by(|a, b| a.1.total_cmp(&b.1));
+        match best {
+            Some((i, gain)) if gain > 0.02 * base.max(1.0) => chosen.push(i),
+            _ => break,
+        }
+    }
+    // TM ideas: machines that would add most to the chosen set.
+    let cur: Vec<(u8, f32)> = chosen.iter().map(|&i| value_of(i)).collect();
+    let base = set_value(&cur);
+    let mut ideas: Vec<(f32, (u16, u16))> = machine_options.iter().filter_map(|&(n, id)| {
+        let v = move_value(dex, vg, &types, &sp.base_stats, dex.moves.get(&id)?)?;
+        let mut s2 = cur.clone();
+        s2.push(v);
+        let gain = set_value(&s2) - base;
+        (gain > 0.1 * base.max(1.0)).then_some((gain, (n, id)))
+    }).collect();
+    ideas.sort_by(|a, b| b.0.total_cmp(&a.0));
+    let keep_status = if chosen.len() < 4 {
+        m.moves.iter().copied().filter(|id| dex.moves.get(id).is_some_and(|mv| mv.class == 1)).collect()
+    } else {
+        vec![]
+    };
+    let moves: Vec<u16> = chosen.iter().map(|&i| cands[i].0).collect();
+    let fighter = fighter(dex, vg, growth.species, &moves);
+    let mut picks = vec![];
+    for (i, c) in cands.into_iter().enumerate() {
+        if chosen.contains(&i) { picks.push(c); }
+    }
+    let pm = ProjMember { growth, learns, picks, tm_ideas: ideas.into_iter().take(3).map(|x| x.1).collect(), keep_status };
+    (pm, fighter)
+}
+
+fn bosses(dex: &Dex, game: &Game, team: &[Mon], ahead: &[usize]) -> Vec<BossView> {
+    let gn = game.vg.gn;
     ahead.iter().map(|&bi| {
         let b = &game.bosses[bi];
+        let their_max = b.team.iter().map(|m| m.level).max().unwrap_or(1);
+        // Judge the fight with the team you will realistically bring: raised to their top level, evolved, with its best moves.
+        let t = targets(dex, game, &[bi]);
+        let plans: Vec<(ProjMember, Fighter)> = team.iter().map(|m| plan(dex, game, m, their_max, &t)).collect();
+        let fighters: Vec<&Fighter> = plans.iter().map(|p| &p.1).collect();
         let mut our_score = 0.0;
         let mut their_threat = 0.0;
         let mons = b.team.iter().map(|bm| {
@@ -326,12 +476,15 @@ fn bosses(dex: &Dex, game: &Game, team: &[Mon], fighters: &[Fighter], ahead: &[u
             their_threat += threatens as f32 / fighters.len().max(1) as f32;
             BossMonView { species: bm.dex, level: bm.level, types: foe.types, moves, answer, threatens }
         }).collect();
-        let n = b.team.len() as f32;
-        let their_max = b.team.iter().map(|m| m.level).max().unwrap_or(1);
-        let gap = their_max as i32 - our_max;
-        let score = our_score / n - their_threat / n * 1.5 - (gap.max(0) as f32) * 0.08;
+        let n = b.team.len().max(1) as f32;
+        // Raw strength: average stat total of their Pokémon vs. ours at that level (evolved forms count here).
+        let theirs = b.team.iter().map(|bm| stat_total(dex, bm.dex, bm.level)).sum::<f32>() / n;
+        let ours = plans.iter().map(|p| p.0.growth.stats.iter().map(|&x| x as f32).sum::<f32>()).sum::<f32>() / plans.len().max(1) as f32;
+        let strength = if theirs > 0.0 { (ours / theirs - 1.0).clamp(-0.5, 0.5) } else { 0.0 };
+        let score = our_score / n - their_threat / n * 1.5 + strength;
         let verdict = if score >= 1.2 { Verdict::Dominate } else if score >= 0.6 { Verdict::Even } else { Verdict::Struggle };
-        BossView { boss: bi, verdict, their_max, mons }
+        let team = plans.iter().map(|p| (p.0.growth.species, p.0.growth.level)).collect();
+        BossView { boss: bi, verdict, their_max, team, mons }
     }).collect()
 }
 
@@ -355,86 +508,16 @@ fn move_value(dex: &Dex, vg: &VersionGroup, types: &[u8], base: &[u16; 6], mv: &
     Some((t, p * stab * acc * stat / 100.0 * drawback))
 }
 
-/// Moves each member can have by the next boss, the best 4 for the fights ahead, and the rating with them.
-fn project(dex: &Dex, game: &Game, team: &[Mon], fighters: &[Fighter], ahead: &[usize]) -> Projection {
-    let vg = game.vg;
-    let gn = vg.gn;
-    let next = ahead.first().map(|&i| &game.bosses[i]);
+/// The team raised to the level of the chosen boss (default: the next one), with evolutions and the best 4 moves.
+fn project(dex: &Dex, game: &Game, team: &[Mon], ahead: &[usize], focus: Option<usize>) -> Projection {
     let our_max = team.iter().map(|m| m.level).max().unwrap_or(1);
-    let target = next.map(|b| b.team.iter().map(|m| m.level).max().unwrap_or(1)).unwrap_or(our_max.saturating_add(5)).max(our_max);
-
-    // What moves are scored against: every type once, the Pokémon of the next three bosses three times.
-    let mut targets: Vec<(Vec<u8>, f32)> = dex.types_in_gen(gn).into_iter().map(|x| (vec![x], 1.0)).collect();
-    for &bi in ahead.iter().take(3) {
-        for bm in &game.bosses[bi].team {
-            if let Some(s) = dex.species.get(&bm.dex) { targets.push((dex.species_types(s, gn), 3.0)); }
-        }
-    }
-    let set_value = |set: &[(u8, f32)]| -> f32 {
-        targets.iter().map(|(ty, w)| w * set.iter().map(|&(mt, v)| dex.eff(mt, ty, gn) * v).fold(0.0, f32::max)).sum()
-    };
-
-    let mut members = vec![];
-    let mut projected = vec![];
-    for (m, f) in team.iter().zip(fighters) {
-        let Some(sp) = dex.species.get(&m.species) else { continue };
-        let mut cands: Vec<(u16, Source)> = m.moves.iter().map(|&id| (id, Source::Known)).collect();
-        let mut learns = vec![];
-        for &(lv, id) in game.learn.level_up.get(&m.species).into_iter().flatten() {
-            if lv > m.level && lv <= target { learns.push((lv, id)); }
-            if lv >= 1 && lv <= target && !cands.iter().any(|c| c.0 == id) { cands.push((id, Source::Level(lv))); }
-        }
-        let mut machine_options: Vec<(u16, u16)> = vec![];
-        for &id in game.learn.machine.get(&m.species).into_iter().flatten() {
-            let Some(&n) = game.learn.machine_no.get(&id) else { continue };
-            if cands.iter().any(|c| c.0 == id) { continue; }
-            match game.owned_machines {
-                Some(o) if o.contains(&id) => cands.push((id, Source::Machine(n))),
-                _ => machine_options.push((n, id)),
-            }
-        }
-        // Greedy: add the move that raises the set's value most; stop under 2 % (coverage moves matter even when weak).
-        let valued: Vec<(usize, (u8, f32))> = cands.iter().enumerate()
-            .filter_map(|(i, (id, _))| Some((i, move_value(dex, vg, &f.types, &sp.base_stats, dex.moves.get(id)?)?)))
-            .collect();
-        let value_of = |i: usize| valued.iter().find(|v| v.0 == i).unwrap().1;
-        let mut chosen: Vec<usize> = vec![];
-        while chosen.len() < 4 {
-            let cur: Vec<(u8, f32)> = chosen.iter().map(|&i| value_of(i)).collect();
-            let base = set_value(&cur);
-            let best = valued.iter().filter(|v| !chosen.contains(&v.0))
-                .map(|v| { let mut s = cur.clone(); s.push(v.1); (v.0, set_value(&s) - base) })
-                .max_by(|a, b| a.1.total_cmp(&b.1));
-            match best {
-                Some((i, gain)) if gain > 0.02 * base.max(1.0) => chosen.push(i),
-                _ => break,
-            }
-        }
-        // TM ideas: machines that would add most to the chosen set.
-        let cur: Vec<(u8, f32)> = chosen.iter().map(|&i| value_of(i)).collect();
-        let base = set_value(&cur);
-        let mut ideas: Vec<(f32, (u16, u16))> = machine_options.iter().filter_map(|&(n, id)| {
-            let v = move_value(dex, vg, &f.types, &sp.base_stats, dex.moves.get(&id)?)?;
-            let mut s2 = cur.clone();
-            s2.push(v);
-            let gain = set_value(&s2) - base;
-            (gain > 0.1 * base.max(1.0)).then_some((gain, (n, id)))
-        }).collect();
-        ideas.sort_by(|a, b| b.0.total_cmp(&a.0));
-        let keep_status = if chosen.len() < 4 {
-            m.moves.iter().copied().filter(|id| dex.moves.get(id).is_some_and(|mv| mv.class == 1)).collect()
-        } else {
-            vec![]
-        };
-        let moves: Vec<u16> = chosen.iter().map(|&i| cands[i].0).collect();
-        projected.push(fighter(dex, vg, m.species, &moves));
-        let mut picks = vec![];
-        for (i, c) in cands.into_iter().enumerate() {
-            if chosen.contains(&i) { picks.push(c); }
-        }
-        members.push(ProjMember { learns, picks, tm_ideas: ideas.into_iter().take(3).map(|x| x.1).collect(), keep_status });
-    }
-    Projection { target, for_boss: ahead.first().copied(), members, rating_after: summarize(dex, &projected, gn).rating }
+    let pos = focus.and_then(|f| ahead.iter().position(|&b| b == f)).unwrap_or(0);
+    let boss = ahead.get(pos).copied();
+    let target = boss.map(|b| game.bosses[b].team.iter().map(|m| m.level).max().unwrap_or(1))
+        .unwrap_or(our_max.saturating_add(5)).max(our_max);
+    let t = targets(dex, game, ahead.get(pos..).map(|r| &r[..r.len().min(3)]).unwrap_or(&[]));
+    let (members, fighters): (Vec<ProjMember>, Vec<Fighter>) = team.iter().map(|m| plan(dex, game, m, target, &t)).unzip();
+    Projection { target, for_boss: boss, members, rating_after: summarize(dex, &fighters, game.vg.gn).rating }
 }
 
 #[cfg(test)]
@@ -477,7 +560,7 @@ mod tests {
             Mon { species: 74, level: 8, moves: vec![tackle], nickname: None },    // Kleinstein
             Mon { species: 158, level: 10, moves: vec![aqua], nickname: None },    // Karnimani
         ];
-        let r = analyse(&dex, &game, &team);
+        let r = analyse(&dex, &game, &team, None);
         let ground = r.defense.iter().find(|d| d.atk == 5).unwrap();
         assert_eq!(ground.counters, vec![(1, aqua)]); // Karnimani answers Boden
         assert_eq!(r.projection.for_boss, Some(0)); // next boss: Falk
@@ -485,5 +568,15 @@ mod tests {
         let k = &r.projection.members[0];
         assert!(k.learns.contains(&(11, 88)));
         assert!(k.picks.iter().any(|p| p.0 == 88));
+        assert_eq!(k.growth.species, 74); // no evolution before Lv 13
+
+        // Projected to the last boss: Kleinstein -> Georok at 25 (Geowaz by trade in vanilla), Karnimani -> Impergator.
+        let last = *r.bosses.last().map(|b| &b.boss).unwrap();
+        let r2 = analyse(&dex, &game, &team, Some(last));
+        let g = &r2.projection.members[0].growth;
+        assert_eq!((g.species, g.evolved[0]), (75, (75, 25)));
+        assert!(g.could.contains(&(76, crate::data::EvoHow::Trade)));
+        assert_eq!(r2.projection.members[1].growth.species, 160);
+        assert_eq!(r2.bosses.last().unwrap().team[1].0, 160); // the boss verdict uses the evolved team
     }
 }

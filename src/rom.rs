@@ -1,5 +1,6 @@
 //! Read real boss teams from a HeartGold/SoulSilver ROM (works for ROM hacks too).
 //! Layout: research/save-formats.md part D (verified on Max's SoulSilver hard mod).
+use crate::data::EvoHow;
 use crate::data::{norm, Boss, BossMon, Dex};
 
 fn u16le(d: &[u8], o: usize) -> u16 { u16::from_le_bytes([d[o], d[o + 1]]) }
@@ -111,5 +112,29 @@ pub fn hgss_learnsets(rom: &[u8]) -> Option<std::collections::HashMap<u16, Vec<(
             .map(|w| ((w >> 9) as u8, w & 0x1FF))
             .collect();
         Some((sp, list))
+    }).collect())
+}
+
+
+/// HGSS evolutions (a/0/3/4): per species 7 entries of (method, parameter, target), 44 bytes.
+/// Hacks often turn trade evolutions into level ones, so the ROM's table wins over PokeAPI's.
+pub fn hgss_evolutions(rom: &[u8]) -> Option<std::collections::HashMap<u16, Vec<(u16, EvoHow)>>> {
+    let narc_data = nds_file(rom, "a/0/3/4")?;
+    Some((1..=493u16).filter_map(|sp| {
+        let b = narc(narc_data, sp as usize)?;
+        let list: Vec<(u16, EvoHow)> = b.chunks_exact(6).take(7).filter_map(|e| {
+            let w = |i: usize| u16::from_le_bytes([e[i], e[i + 1]]);
+            let (method, param, to) = (w(0), w(2), w(4));
+            if method == 0 || to == 0 || to > 493 { return None; }
+            let how = match method {
+                4 | 8..=14 | 22 | 23 => EvoHow::Level(param.min(100) as u8),
+                1..=3 => EvoHow::Friendship,
+                6 | 7 | 16..=19 => EvoHow::Item,
+                5 => EvoHow::Trade,
+                _ => EvoHow::Other,
+            };
+            Some((to, how))
+        }).collect();
+        (!list.is_empty()).then_some((sp, list))
     }).collect())
 }

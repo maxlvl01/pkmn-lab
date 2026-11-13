@@ -1,6 +1,6 @@
 //! The app window (egui). Everything the user sees lives here; maths is in analysis.rs.
 use crate::analysis::{self, Game, Mon, Report, Source, Verdict};
-use crate::data::{Boss, Dex, Lang, Learnsets};
+use crate::data::{Boss, Dex, EvoHow, Lang, Learnsets};
 use crate::sprites::Sprites;
 use crate::{rom, save, update};
 use eframe::egui::{self, Color32, CornerRadius, RichText, Stroke, Ui, Vec2};
@@ -24,6 +24,7 @@ struct Saved {
 struct RomData {
     bosses: Vec<Boss>,
     level_up: HashMap<u16, Vec<(u8, u16)>>,
+    evolutions: HashMap<u16, Vec<(u16, EvoHow)>>,
 }
 
 pub struct App {
@@ -45,6 +46,8 @@ pub struct App {
     report: Option<Report>,
     dirty: bool,
     tab: Tab,
+    /// boss the projection is made for; None = the next one
+    proj_focus: Option<usize>,
     message: Option<(bool, String)>, // (is_error, text)
     search: Vec<String>,
     update_status: Arc<Mutex<Option<String>>>,
@@ -174,6 +177,7 @@ impl App {
             report: None,
             dirty: true,
             tab: Tab::Team,
+            proj_focus: None,
             message: None,
             search: vec![],
             update_status: Arc::new(Mutex::new(None)),
@@ -237,7 +241,7 @@ impl App {
             let game = "heartgold-soulsilver";
             let mut bosses = self.dex.bosses.iter().find(|g| g.id == game).map(|g| g.bosses.clone()).unwrap_or_default();
             rom::apply_rom_teams(&bytes, game, &mut bosses, &self.dex)?;
-            Ok(RomData { bosses, level_up: rom::hgss_learnsets(&bytes).unwrap_or_default() })
+            Ok(RomData { bosses, level_up: rom::hgss_learnsets(&bytes).unwrap_or_default(), evolutions: rom::hgss_evolutions(&bytes).unwrap_or_default() })
         });
         match result {
             Ok(r) => {
@@ -260,6 +264,7 @@ impl App {
         if let (true, Some(r)) = (self.game_id == "heartgold-soulsilver", &self.rom) {
             self.bosses = r.bosses.clone();
             if !r.level_up.is_empty() { self.learn.level_up = r.level_up.clone(); }
+            if !r.evolutions.is_empty() { self.learn.evolutions = r.evolutions.clone(); }
         }
         self.data_key = key;
     }
@@ -274,7 +279,7 @@ impl App {
             self.learn.machine_no.iter().filter(|(_, n)| ns.contains(n)).map(|(&mv, _)| mv).collect()
         });
         let game = Game { vg, bosses: &self.bosses, badges: &self.badges, learn: &self.learn, owned_machines: owned.as_ref() };
-        self.report = Some(analysis::analyse(&self.dex, &game, &self.team));
+        self.report = Some(analysis::analyse(&self.dex, &game, &self.team, self.proj_focus));
     }
 }
 
@@ -673,13 +678,30 @@ impl App {
         });
     }
 
-    fn tab_projection(&self, ui: &mut Ui, r: &Report) {
+    fn tab_projection(&mut self, ui: &mut Ui, r: &Report) {
         let l = self.lang;
         let p = &r.projection;
         let vg = self.dex.vg(&self.game_id).unwrap();
         card(ui, |ui| {
-            let who = p.for_boss.map(|b| format!(" – {} {}", t(l, "for", "für"), l.pick(&self.bosses[b].name_en, &self.bosses[b].name_de))).unwrap_or_default();
-            ui.label(RichText::new(format!("{} {}{who}", t(l, "Best attacks by level", "Beste Attacken bis Level"), p.target)).size(17.0).strong());
+            ui.horizontal(|ui| {
+                ui.label(RichText::new(format!("{} {}", t(l, "Your team at level", "Dein Team auf Level"), p.target)).size(17.0).strong());
+                ui.label(RichText::new(t(l, "for", "für")).size(17.0));
+                let name = |b: usize| l.pick(&self.bosses[b].name_en, &self.bosses[b].name_de).to_string();
+                let current = p.for_boss.map(name).unwrap_or_default();
+                let mut pick = p.for_boss;
+                egui::ComboBox::from_id_salt("proj_boss").selected_text(current).show_ui(ui, |ui| {
+                    for bv in &r.bosses {
+                        ui.selectable_value(&mut pick, Some(bv.boss), format!("{}  (Lv {})", name(bv.boss), bv.their_max));
+                    }
+                });
+                if pick != p.for_boss {
+                    self.proj_focus = pick;
+                    self.dirty = true;
+                }
+            });
+            ui.label(RichText::new(t(l,
+                "Each member raised to the boss's top level: evolutions by level happen, then the best 4 attacks for this fight and the two after it.",
+                "Jedes Mitglied auf das höchste Level des Bosses gebracht: Level-Entwicklungen passieren, dann die besten 4 Attacken für diesen Kampf und die zwei danach.")).color(MUTED));
             ui.label(RichText::new(match &self.owned_tms {
                 None => t(l, "Your TMs are unknown, so sets use level-up moves; TM ideas are shown separately.",
                     "Deine TMs sind unbekannt, daher nur Level-Attacken im Set; TM-Ideen stehen extra."),
@@ -691,45 +713,63 @@ impl App {
         ui.add_space(8.0);
         let items: Vec<_> = self.team.iter().zip(&p.members).collect();
         card_rows(ui, &items, 300.0, |ui, &(m, pm)| {
-                card(ui, |ui| {
-                    ui.set_width(300.0);
-                    ui.horizontal(|ui| {
-                        self.species_sprite(ui, m.species, 60.0);
-                        ui.vertical(|ui| {
-                            ui.label(RichText::new(self.sname(m.species)).size(16.0).strong());
-                            ui.label(RichText::new(format!("Lv {} » {}", m.level, p.target)).color(MUTED));
-                        });
+            let g = &pm.growth;
+            card(ui, |ui| {
+                ui.set_width(300.0);
+                ui.horizontal(|ui| {
+                    self.species_sprite(ui, g.species, 72.0);
+                    ui.vertical(|ui| {
+                        ui.label(RichText::new(self.sname(g.species)).size(16.0).strong());
+                        ui.label(RichText::new(format!("Lv {} » {}", m.level, g.level)).color(MUTED));
+                        let types = self.dex.species.get(&g.species).map(|s| self.dex.species_types(s, vg.gn)).unwrap_or_default();
+                        self.types_row(ui, &types);
                     });
-                    if !pm.learns.is_empty() {
-                        ui.label(RichText::new(t(l, "Learns on the way", "Lernt bis dahin")).color(MUTED));
-                        for &(lv, id) in &pm.learns { ui.label(format!("Lv {lv}  {}", self.mname(id))); }
-                    }
-                    ui.label(RichText::new(t(l, "Best attacks", "Beste Attacken")).color(MUTED));
-                    if pm.picks.is_empty() { ui.label(t(l, "none found", "keine gefunden")); }
-                    for (id, src) in &pm.picks {
-                        let (ty, pw) = self.dex.move_stats(&self.dex.moves[id], vg);
-                        ui.horizontal(|ui| {
-                            self.type_badge(ui, ty);
-                            ui.label(self.mname(*id));
-                            ui.label(RichText::new(pw.map(|p| p.to_string()).unwrap_or_default()).color(MUTED));
-                            match src {
-                                Source::Known => {}
-                                Source::Level(lv) => pill(ui, &format!("{} Lv {lv}", t(l, "new", "neu")), Color32::from_rgb(0x3d, 0x7b, 0xd8)),
-                                Source::Machine(n) => pill(ui, &machine_label(*n, l), Color32::from_rgb(0x8a, 0x5c, 0xd6)),
-                            }
-                        });
-                    }
-                    if !pm.tm_ideas.is_empty() {
-                        ui.label(RichText::new(t(l, "TM ideas", "TM-Ideen")).color(MUTED));
-                        ui.horizontal_wrapped(|ui| {
-                            for &(n, id) in &pm.tm_ideas { pill(ui, &format!("{} {}", machine_label(n, l), self.mname(id)), CARD_HI); }
-                        });
-                    }
-                    if !pm.keep_status.is_empty() {
-                        let names: Vec<String> = pm.keep_status.iter().map(|&id| self.mname(id)).collect();
-                        ui.label(RichText::new(format!("{}: {}", t(l, "Free slots, e.g. keep", "Freie Plätze, z.B. behalten"), names.join(", "))).color(MUTED).small());
-                    }
                 });
+                for &(to, at) in &g.evolved {
+                    ui.colored_label(GOOD, format!("{} {} {} Lv {at}", t(l, "Evolves into", "Entwickelt sich zu"), self.sname(to), t(l, "at", "bei")));
+                }
+                for &(to, how) in &g.could {
+                    let how = match how {
+                        EvoHow::Trade => t(l, "by trade", "durch Tausch"),
+                        EvoHow::Item => t(l, "with an item", "mit Item"),
+                        EvoHow::Friendship => t(l, "with friendship", "durch Freundschaft"),
+                        _ => t(l, "special condition", "besondere Bedingung"),
+                    };
+                    ui.colored_label(OKAY, format!("{} {} ({how})", t(l, "Could become", "Kann werden:"), self.sname(to)));
+                }
+                stat_bars(ui, &g.stats, l);
+                if !pm.learns.is_empty() {
+                    ui.label(RichText::new(t(l, "Learns on the way", "Lernt bis dahin")).color(MUTED));
+                    ui.horizontal_wrapped(|ui| {
+                        for &(lv, id) in &pm.learns { pill(ui, &format!("Lv {lv} {}", self.mname(id)), CARD_HI); }
+                    });
+                }
+                ui.label(RichText::new(t(l, "Best attacks", "Beste Attacken")).color(MUTED));
+                if pm.picks.is_empty() { ui.label(t(l, "none found", "keine gefunden")); }
+                for (id, src) in &pm.picks {
+                    let (ty, pw) = self.dex.move_stats(&self.dex.moves[id], vg);
+                    ui.horizontal(|ui| {
+                        self.type_badge(ui, ty);
+                        ui.label(self.mname(*id));
+                        ui.label(RichText::new(pw.map(|p| p.to_string()).unwrap_or_default()).color(MUTED));
+                        match src {
+                            Source::Known => {}
+                            Source::Level(lv) => pill(ui, &format!("{} Lv {lv}", t(l, "new", "neu")), Color32::from_rgb(0x3d, 0x7b, 0xd8)),
+                            Source::Machine(n) => pill(ui, &machine_label(*n, l), Color32::from_rgb(0x8a, 0x5c, 0xd6)),
+                        }
+                    });
+                }
+                if !pm.tm_ideas.is_empty() {
+                    ui.label(RichText::new(t(l, "TM ideas", "TM-Ideen")).color(MUTED));
+                    ui.horizontal_wrapped(|ui| {
+                        for &(n, id) in &pm.tm_ideas { pill(ui, &format!("{} {}", machine_label(n, l), self.mname(id)), CARD_HI); }
+                    });
+                }
+                if !pm.keep_status.is_empty() {
+                    let names: Vec<String> = pm.keep_status.iter().map(|&id| self.mname(id)).collect();
+                    ui.label(RichText::new(format!("{}: {}", t(l, "Free slots, e.g. keep", "Freie Plätze, z.B. behalten"), names.join(", "))).color(MUTED).small());
+                }
+            });
         });
     }
 
@@ -789,7 +829,11 @@ impl App {
                         ui.label(RichText::new(format!("{place}{var}")).color(MUTED));
                         let gap = bv.their_max as i32 - our_max as i32;
                         let col = if gap > 3 { BAD } else if gap > 0 { OKAY } else { GOOD };
-                        ui.label(RichText::new(format!("{} {}  ·  {} {}", t(l, "Their top level", "Ihr höchstes Level"), bv.their_max, t(l, "yours", "deins"), our_max)).color(col));
+                        ui.label(RichText::new(format!("{} {}  ·  {} {}", t(l, "Their top level", "Ihr höchstes Level"), bv.their_max, t(l, "yours now", "deins jetzt"), our_max)).color(col));
+                        ui.horizontal(|ui| {
+                            ui.label(RichText::new(t(l, "Judged with your team at their level:", "Bewertet mit deinem Team auf ihrem Level:")).color(MUTED).small());
+                            for &(sp, _) in &bv.team { self.species_sprite(ui, sp, 32.0); }
+                        });
                     });
                 });
                 egui::CollapsingHeader::new(t(l, "Their team and your answers", "Ihr Team und deine Konter"))
@@ -811,8 +855,8 @@ impl App {
                                 ui.label(RichText::new(t(l, "Your answer", "Dein Konter")).small().color(MUTED));
                                 if let Some((i, mult)) = bm.answer {
                                     ui.horizontal(|ui| {
-                                        self.species_sprite(ui, self.team[i].species, 32.0);
-                                        ui.label(self.sname(self.team[i].species));
+                                        self.species_sprite(ui, bv.team[i].0, 32.0);
+                                        ui.label(self.sname(bv.team[i].0));
                                         pill(ui, &mult_label(mult), mult_color(mult, true));
                                     });
                                 }
@@ -947,4 +991,20 @@ fn card_rows<T>(ui: &mut Ui, items: &[T], width: f32, mut add: impl FnMut(&mut U
         ui.horizontal_top(|ui| for it in row { add(ui, it); });
         ui.add_space(4.0);
     }
+}
+
+/// Six small stat bars (scale: 255 at Lv 100 is the top of the bar range).
+fn stat_bars(ui: &mut Ui, stats: &[u16; 6], l: Lang) {
+    // shortcut: German short stat names as commonly written; not checked against the ROM's text.
+    let names = if l == Lang::De { ["KP", "Angr.", "Vert.", "Sp.-Angr.", "Sp.-Vert.", "Init."] } else { ["HP", "Atk", "Def", "SpA", "SpD", "Spe"] };
+    let max = stats.iter().copied().max().unwrap_or(1).max(1) as f32;
+    egui::Grid::new(ui.next_auto_id()).spacing([6.0, 2.0]).show(ui, |ui| {
+        for (i, &v) in stats.iter().enumerate() {
+            ui.label(RichText::new(names[i]).small().color(MUTED));
+            ui.label(RichText::new(v.to_string()).small().strong());
+            ui.add(egui::ProgressBar::new(v as f32 / max).desired_width(150.0).desired_height(6.0)
+                .fill(Color32::from_rgb(0x3d, 0x7b, 0xd8)));
+            ui.end_row();
+        }
+    });
 }

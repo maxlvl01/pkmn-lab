@@ -22,12 +22,14 @@ You can also start it with files: `pkmn-lab.exe <save> [rom.nds]` (or "Öffnen m
 - **Schwächen:** how every attack type hits every member, the biggest weakness, and whether someone hits it back
   super effectively (a counter makes a weakness count less).
 - **Angriff:** your best multiplier against each type and how many members hit it super effectively.
-- **Projektion:** up to the top level of the next boss: what each member learns on the way and the best 4 attacks for
-  the next bosses (power, STAB, accuracy, matching attack stat, coverage). TMs/HMs in your bag are used; others appear as
-  "TM-Ideen".
+- **Projektion:** pick any boss ahead (default: the next one). Each member is raised to that boss's top level, evolves
+  where a level evolution allows it (stones, trade and friendship are shown as options), and gets its stats at that level,
+  what it learns on the way and the best 4 attacks for that fight (power, STAB, accuracy, matching attack stat, coverage).
+  TMs/HMs in your bag are used; others appear as "TM-Ideen". With an HGSS ROM, the hack's own evolutions are used.
 - **Fangen:** which typing would raise the team rating most, with example Pokémon.
-- **Bosse:** every gym leader, Elite Four member and champion still ahead, with a verdict, levels, their moves and your
-  best answer to each of their Pokémon.
+- **Bosse:** every gym leader, Elite Four member and champion still ahead, with their moves and your best answer to each
+  of their Pokémon. Each verdict is judged with your team as it will be at that boss's level (evolved, with its projected
+  moves and stats), not with today's team.
 
 Team rating 0–100: offensive coverage 45 %, types handled defensively 45 %, team size 10 %, minus a penalty for
 stacked weaknesses.
