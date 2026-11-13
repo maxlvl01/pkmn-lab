@@ -13,10 +13,10 @@ It is a single file: no installer, and it updates itself (checks GitHub once a d
 3. Optional for HeartGold/SoulSilver: drag the `.nds` ROM in as well. Then the real boss teams and level-up moves are read
    from the ROM, plus every other trainer, your rival and where wild Pokémon live, so ROM hacks (e.g. hard mods) show
    what you will actually face.
-
 4. **PokeMMO:** pick "PokeMMO – Kanto / Johto / Hoenn / Sinnoh / Einall" as the game and enter your team by hand (PokeMMO
    has no save file). It uses Gen 5 rules (no Fee type), Black 2/White 2 learnsets and the full Pokédex up to #649. Boss
    teams are the original games' ones, since no PokeMMO team data was found; PokeMMO's own fights may differ.
+
 The app remembers the last save and ROM and re-reads the save at every start, so it is always current.
 You can also start it with files: `pkmn-lab.exe <save> [rom.nds]` (or "Öffnen mit").
 
