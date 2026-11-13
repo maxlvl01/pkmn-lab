@@ -910,8 +910,8 @@ impl App {
             return;
         }
         let note = if !self.national_dex && !self.learn.wild.is_empty() {
-            t(l, "Only Pokémon you can catch in the wild in your ROM, or evolve one into. Place and level come from the ROM; ones you can get soon come first.",
-                "Nur Pokémon, die du in deiner ROM wild fangen kannst oder durch Entwicklung bekommst. Ort und Level stammen aus der ROM; was du bald bekommst, steht vorn.")
+            t(l, "Only Pokémon you can catch in the wild in your ROM, or evolve one into. Place and level come from the ROM; when in the story (badges) is a rough guide from walkthroughs. What you can get soon comes first.",
+                "Nur Pokémon, die du in deiner ROM wild fangen kannst oder durch Entwicklung bekommst. Ort und Level stammen aus der ROM; ab wie vielen Orden ist ein grober Richtwert aus Komplettlösungen. Was du bald bekommst, steht vorn.")
         } else if self.national_dex || self.learn.regional.is_empty() {
             t(l, "Examples come from every Pokémon up to this generation; not all of them can be caught in your game.",
                 "Beispiele aus allen Pokémon bis zu dieser Generation; nicht alle sind in deinem Spiel fangbar.")
@@ -962,7 +962,8 @@ impl App {
                             self.species_sprite(ui, id, 64.0);
                             ui.label(RichText::new(self.sname(id)).small());
                             if let Some(Some((_, w))) = c.spots.get(k) {
-                                ui.label(RichText::new(format!("{} · Lv {}", w.place, w.level)).small().color(if w.late { BAD } else { MUTED }))
+                                ui.label(RichText::new(format!("{} · Lv {}{}", w.place, w.level,
+                                    if w.late() || w.badges <= self.badge_count() { String::new() } else { format!(" · {} {}", w.badges, t(self.lang, "badges", "Orden")) })).small().color(if w.late() { BAD } else if w.badges > self.badge_count() { OKAY } else { MUTED }))
                                     .on_hover_text(self.spot_text(c.spots[k].as_ref().unwrap().0, id, w));
                             }
                         });
@@ -1075,8 +1076,14 @@ impl App {
             Rod => t(l, "fishing", "Angeln").to_string(),
         };
         let evolve = if src != target { format!(", {} {}", t(l, "evolve it into", "entwickeln zu"), self.sname(target)) } else { String::new() };
-        let late = if w.late { t(l, " (only after the Pokémon League)", " (erst nach der Pokémon-Liga)") } else { "" };
-        format!("{} {} {} {} ({}, {} Lv {}){evolve}{late}", t(l, "Catch", "Fange"), self.sname(src), t(l, "at", "bei"), w.place, how, t(l, "from", "ab"), w.level)
+        let when = if w.late() { t(l, " – only after the Pokémon League", " – erst nach der Pokémon-Liga").to_string() }
+            else if w.badges > self.badge_count() { format!(" – {} {} {}", t(l, "from", "ab"), w.badges, t(l, "badges", "Orden")) }
+            else { t(l, " – reachable now", " – schon erreichbar").to_string() };
+        format!("{} {} {} {} ({}, {} Lv {}){evolve}{when}", t(l, "Catch", "Fange"), self.sname(src), t(l, "at", "bei"), w.place, how, t(l, "from", "ab"), w.level)
+    }
+
+    fn badge_count(&self) -> u8 {
+        self.badges.iter().filter(|&&b| b).count() as u8
     }
 
     /// Spoiler protection status, with a confirm dialog before revealing upcoming teams.

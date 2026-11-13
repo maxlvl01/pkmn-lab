@@ -384,8 +384,12 @@ pub struct WildSpot {
     pub place: String,
     pub level: u8,
     pub how: CatchHow,
-    /// only reachable after the Pokémon League (Kanto, Silberberg)
-    pub late: bool,
+    /// badges you normally have when you can first catch it there; 16 = after the Pokémon League
+    pub badges: u8,
+}
+
+impl WildSpot {
+    pub fn late(&self) -> bool { self.badges >= 16 }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]

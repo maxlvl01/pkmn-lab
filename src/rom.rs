@@ -154,30 +154,35 @@ pub fn hgss_wild(rom: &[u8]) -> HashMap<u16, Vec<WildSpot>> {
         let (enc, sec) = (r[0] as usize, r[0x12] as usize);
         if enc == 0xFF || !seen.insert((enc, sec)) { continue; }
         let (Some(e), Some(place)) = (narc(encs, enc), places.get(sec)) else { continue };
-        // HGSS place ids: 137 Silberberg, 138-176 Kanto towns and Routes 1-28 (26/27 lead to the League), Kanto caves.
-        let late = matches!(sec, 137..=173 | 176 | 197..=200 | 203 | 219 | 224);
         if e.len() < 0xC4 { continue; }
-        let mut add = |sp: u16, level: u8, how: CatchHow| {
-            if sp != 0 && level > 0 { out.entry(sp).or_default().push(WildSpot { place: place.clone(), level, how, late }); }
+        // Unknown places count as after the League, so they never look early.
+        let (walk, water) = HGSS_STORY.iter().find(|p| p.0 as usize == sec).map_or((16, 16), |p| (p.1, p.2));
+        let mut add = |sp: u16, level: u8, how: CatchHow, badges: u8| {
+            if sp != 0 && level > 0 { out.entry(sp).or_default().push(WildSpot { place: place.clone(), level, how, badges }); }
         };
         if e[0] > 0 {
-            for k in 0..12 { for time in 0..3 { add(u16le(e, 0x14 + 24 * time + 2 * k), e[8 + k], CatchHow::Grass); } }
+            for k in 0..12 { for time in 0..3 { add(u16le(e, 0x14 + 24 * time + 2 * k), e[8 + k], CatchHow::Grass, walk); } }
         }
-        // water / rock slots: min level, max level, species
-        for (rate, off, n, how) in [(e[1], 0x64, 5, CatchHow::Surf), (e[2], 0x78, 2, CatchHow::RockSmash),
-            (e[3], 0x80, 5, CatchHow::Rod), (e[4], 0x94, 5, CatchHow::Rod), (e[5], 0xA8, 5, CatchHow::Rod)] {
+        // water / rock slots: min level, max level, species. Surfer needs badge 4, Zertrümmerer 3 (research/story-order),
+        // Angel badge 1 (Route 32), Profiangel 4 (Oliviana), Superangel after the League (Kanto).
+        for (rate, off, n, how, need) in [(e[1], 0x64, 5, CatchHow::Surf, water.max(4)), (e[2], 0x78, 2, CatchHow::RockSmash, walk.max(3)),
+            (e[3], 0x80, 5, CatchHow::Rod, water.max(1)), (e[4], 0x94, 5, CatchHow::Rod, water.max(4)), (e[5], 0xA8, 5, CatchHow::Rod, 16)] {
             if rate == 0 { continue; }
-            for k in 0..n { add(u16le(e, off + 4 * k + 2), e[off + 4 * k], how); }
+            for k in 0..n { add(u16le(e, off + 4 * k + 2), e[off + 4 * k], how, need); }
         }
     }
     for v in out.values_mut() {
-        // lowest level per place and method, then lowest level first
-        v.sort_by(|a, b| (&a.place, a.how as u8, a.level).cmp(&(&b.place, b.how as u8, b.level)));
+        // earliest per place and method, then earliest in the story first
+        v.sort_by(|a, b| (&a.place, a.how as u8, a.badges, a.level).cmp(&(&b.place, b.how as u8, b.badges, b.level)));
         v.dedup_by(|a, b| a.place == b.place && a.how == b.how);
-        v.sort_by_key(|s| (s.late, s.level));
+        v.sort_by_key(|s| (s.badges, s.level));
     }
     out
 }
+
+/// HGSS story order: (place id, badges when you first walk there, badges for its water / gated parts); 16 = after the League.
+/// shortcut: from walkthroughs plus a Sonnet subagent's game knowledge (research/story-order.csv), not from the game's own checks.
+const HGSS_STORY: &[(u8, u8, u8)] = &[(126, 0, 0), (127, 0, 0), (128, 0, 0), (130, 4, 4), (132, 4, 4), (133, 3, 3), (135, 6, 6), (136, 7, 7), (137, 16, 16), (138, 16, 16), (139, 16, 16), (141, 16, 16), (143, 16, 16), (144, 16, 16), (145, 16, 16), (146, 16, 16), (149, 16, 16), (150, 16, 16), (151, 16, 16), (152, 16, 16), (153, 16, 16), (154, 16, 16), (155, 16, 16), (156, 16, 16), (157, 16, 16), (158, 16, 16), (159, 16, 16), (160, 16, 16), (161, 16, 16), (162, 16, 16), (163, 16, 16), (164, 16, 16), (165, 16, 16), (166, 16, 16), (167, 16, 16), (168, 16, 16), (169, 16, 16), (170, 8, 8), (171, 8, 8), (172, 16, 16), (173, 16, 16), (174, 8, 8), (175, 8, 8), (176, 16, 16), (177, 0, 0), (178, 0, 0), (179, 0, 0), (180, 1, 1), (181, 1, 1), (182, 2, 2), (183, 3, 3), (184, 3, 3), (185, 3, 3), (186, 4, 4), (187, 4, 4), (188, 4, 4), (189, 4, 4), (190, 3, 3), (191, 6, 6), (192, 7, 7), (193, 7, 7), (194, 0, 0), (195, 4, 4), (196, 4, 4), (197, 16, 16), (198, 16, 16), (199, 16, 16), (200, 16, 16), (202, 4, 4), (203, 16, 16), (204, 0, 0), (205, 8, 8), (206, 3, 3), (207, 3, 3), (209, 1, 4), (210, 1, 4), (211, 1, 1), (214, 1, 2), (216, 3, 8), (217, 7, 7), (218, 4, 7), (219, 16, 16), (220, 0, 4), (221, 8, 8), (222, 7, 7), (223, 8, 8), (224, 16, 16), (228, 4, 4), (234, 4, 4)];
 
 /// The map header table in ARM9 (24-byte rows, pret's MapHeader): the longest run of rows that look like headers.
 /// shortcut: a scan instead of a known address; verified on the German SoulSilver only, other ROMs may find nothing (no wild data then).
@@ -292,7 +297,8 @@ mod tests {
         // Taubsi (16) on Route 29 from level 2; Hoothoot (163) there at night.
         assert!(wild[&16].iter().any(|w| w.place == "Route 29" && w.level == 2), "{:?}", wild.get(&16));
         assert!(wild[&163].iter().any(|w| w.place == "Route 29"));
-        assert!(wild[&16].iter().any(|w| w.place == "Route 1" && w.late));
+        assert!(wild[&16].iter().any(|w| w.place == "Route 1" && w.late()));
+        assert!(wild[&16].iter().any(|w| w.place == "Route 29" && w.badges == 0));
         assert!(wild.len() > 100, "only {} species", wild.len());
     }
 }

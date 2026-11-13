@@ -343,7 +343,7 @@ fn recommend(dex: &Dex, gn: u8, fighters: &[Fighter], game: &Game, our_max: u8) 
         for _ in 0..4 {
             let Some(s) = cur else { break };
             if let Some(w) = learn.wild.get(&s).and_then(|v| v.first())
-                && best.as_ref().is_none_or(|b| (w.late, w.level) < (b.1.late, b.1.level)) { best = Some((s, w.clone())); }
+                && best.as_ref().is_none_or(|b| (w.badges, w.level) < (b.1.badges, b.1.level)) { best = Some((s, w.clone())); }
             cur = parent.get(&s).copied();
         }
         best
@@ -372,6 +372,7 @@ fn recommend(dex: &Dex, gn: u8, fighters: &[Fighter], game: &Game, our_max: u8) 
     }
     scored.sort_by_key(|s| std::cmp::Reverse(s.0));
     let bst = |id: u16| dex.species[&id].base_stats.iter().sum::<u16>();
+    let have = game.badges.iter().filter(|&&b| b).count() as u8;
     // Next pick for a free slot: the earliest Pokémon you can get whose typing gives at least 60 % of the best gain.
     // shortcut: "earliest" = wild spot (post-league last, anything up to your level counts as now), else the
     // regional Pokédex number of its earliest form; a story-order table per game would be more exact.
@@ -380,8 +381,9 @@ fn recommend(dex: &Dex, gn: u8, fighters: &[Fighter], game: &Game, our_max: u8) 
         let best = gain_of.values().copied().max().unwrap_or(0);
         let dex_no = |sp: u16| std::iter::successors(Some(sp), |s| parent.get(s).copied()).take(4)
             .filter_map(|s| learn.regional_no.get(&s).copied()).min();
-        let when = |sp: u16| -> Option<(bool, u16)> {
-            if !learn.wild.is_empty() { spot(sp).map(|(_, w)| (w.late, w.level.max(our_max) as u16)) } else { dex_no(sp).map(|n| (false, n)) }
+        let when = |sp: u16| -> Option<(u8, u16)> {
+            // anything you can reach with your badges and level counts as "now"
+            if !learn.wild.is_empty() { spot(sp).map(|(_, w)| (w.badges.max(have), w.level.max(our_max) as u16)) } else { dex_no(sp).map(|n| (0, n)) }
         };
         typings.iter()
             .filter_map(|(ts, ids)| gain_of.get(ts).filter(|&&g| g > 0 && g * 10 >= best * 6).map(|&g| (ts, g, ids)))
@@ -393,7 +395,7 @@ fn recommend(dex: &Dex, gn: u8, fighters: &[Fighter], game: &Game, our_max: u8) 
     for (gain, ts, replacing) in scored {
         if gain <= 0 || out.len() == 5 || out.iter().any(|c| c.types == ts) { continue; }
         let mut examples = typings[&ts].clone();
-        let soon = |id: &u16| spot(*id).is_none_or(|s| !s.1.late && s.1.level <= our_max.saturating_add(10));
+        let soon = |id: &u16| spot(*id).is_none_or(|s| s.1.badges <= have + 1 && s.1.level <= our_max.saturating_add(10));
         // Catchable soon first, then strongest; legendaries included, the user can skip them.
         examples.sort_by_key(|id| (!soon(id), std::cmp::Reverse(dex.species[id].base_stats.iter().sum::<u16>())));
         examples.truncate(5);
@@ -718,12 +720,12 @@ mod tests {
         assert!(p.dex_no.unwrap() <= *learn.regional_no.get(&strongest).unwrap_or(&999));
         // With wild data: a reachable spot beats a post-league one.
         use crate::data::{CatchHow, WildSpot};
-        let w = |level, late| vec![WildSpot { place: "X".into(), level, how: CatchHow::Grass, late }];
+        let w = |level, badges| vec![WildSpot { place: "X".into(), level, how: CatchHow::Grass, badges }];
         let mut wild_learn = dex.learnsets(vg);
-        wild_learn.wild = HashMap::from([(66, w(60, true)), (16, w(3, false)), (74, w(5, false))]);
+        wild_learn.wild = HashMap::from([(66, w(60, 16)), (16, w(3, 0)), (74, w(5, 1))]);
         let game = Game { learn: &wild_learn, ..game };
         let r = analyse(&dex, &game, &team, None);
         let p = r.next_pick.unwrap();
-        assert!(p.spot.is_some_and(|(_, s)| !s.late), "{}", p.species);
+        assert!(p.spot.is_some_and(|(_, s)| !s.late()), "{}", p.species);
     }
 }
