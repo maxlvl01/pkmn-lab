@@ -1,6 +1,7 @@
 //! Read real boss teams from a HeartGold/SoulSilver ROM (works for ROM hacks too).
 //! Layout: research/save-formats.md part D (verified on Max's SoulSilver hard mod).
-use crate::data::EvoHow;
+use crate::data::{CatchHow, EvoHow, WildSpot};
+use std::collections::{HashMap, HashSet};
 use crate::data::{norm, Boss, BossMon, Dex};
 
 fn u16le(d: &[u8], o: usize) -> u16 { u16::from_le_bytes([d[o], d[o + 1]]) }
@@ -135,6 +136,73 @@ pub fn hgss_trainers(rom: &[u8], dex: &Dex) -> Vec<Boss> {
     }).collect()
 }
 
+/// Wild Pokémon of an HGSS ROM: species -> places (names from the ROM's text), lowest level first.
+/// Grass (morning/day/night), surfing, Zertrümmerer and the three rods; radio, swarms and headbutt trees are left out.
+pub fn hgss_wild(rom: &[u8]) -> HashMap<u16, Vec<WildSpot>> {
+    let mut out: HashMap<u16, Vec<WildSpot>> = HashMap::new();
+    // Game code IPG* = SoulSilver, IPK* = HeartGold; each version has its own encounter archive.
+    let path = if rom.get(0x0C..0x0F) == Some(b"IPG".as_slice()) { "a/1/3/6" } else { "a/0/3/7" };
+    let (Some(encs), Some(msgs)) = (nds_file(rom, path), nds_file(rom, "a/0/2/7")) else { return out };
+    if rom.len() < 0x30 { return out; }
+    let places = narc(msgs, 279).map(gen4_messages).unwrap_or_default();
+    let (a9, a9n) = (u32le(rom, 0x20), u32le(rom, 0x2C));
+    let Some(arm9) = rom.get(a9..a9 + a9n) else { return out };
+    let Some((start, rows)) = map_headers(arm9, u16le(encs, 0x18) as usize, places.len()) else { return out };
+    let mut seen = HashSet::new();
+    for h in 0..rows {
+        let r = &arm9[start + 24 * h..start + 24 * h + 24];
+        let (enc, sec) = (r[0] as usize, r[0x12] as usize);
+        if enc == 0xFF || !seen.insert((enc, sec)) { continue; }
+        let (Some(e), Some(place)) = (narc(encs, enc), places.get(sec)) else { continue };
+        // HGSS place ids: 137 Silberberg, 138-176 Kanto towns and Routes 1-28 (26/27 lead to the League), Kanto caves.
+        let late = matches!(sec, 137..=173 | 176 | 197..=200 | 203 | 219 | 224);
+        if e.len() < 0xC4 { continue; }
+        let mut add = |sp: u16, level: u8, how: CatchHow| {
+            if sp != 0 && level > 0 { out.entry(sp).or_default().push(WildSpot { place: place.clone(), level, how, late }); }
+        };
+        if e[0] > 0 {
+            for k in 0..12 { for time in 0..3 { add(u16le(e, 0x14 + 24 * time + 2 * k), e[8 + k], CatchHow::Grass); } }
+        }
+        // water / rock slots: min level, max level, species
+        for (rate, off, n, how) in [(e[1], 0x64, 5, CatchHow::Surf), (e[2], 0x78, 2, CatchHow::RockSmash),
+            (e[3], 0x80, 5, CatchHow::Rod), (e[4], 0x94, 5, CatchHow::Rod), (e[5], 0xA8, 5, CatchHow::Rod)] {
+            if rate == 0 { continue; }
+            for k in 0..n { add(u16le(e, off + 4 * k + 2), e[off + 4 * k], how); }
+        }
+    }
+    for v in out.values_mut() {
+        // lowest level per place and method, then lowest level first
+        v.sort_by(|a, b| (&a.place, a.how as u8, a.level).cmp(&(&b.place, b.how as u8, b.level)));
+        v.dedup_by(|a, b| a.place == b.place && a.how == b.how);
+        v.sort_by_key(|s| (s.late, s.level));
+    }
+    out
+}
+
+/// The map header table in ARM9 (24-byte rows, pret's MapHeader): the longest run of rows that look like headers.
+/// shortcut: a scan instead of a known address; verified on the German SoulSilver only, other ROMs may find nothing (no wild data then).
+fn map_headers(arm9: &[u8], nenc: usize, nplaces: usize) -> Option<(usize, usize)> {
+    let ok = |o: usize| arm9.get(o..o + 24).is_some_and(|r| {
+        ((r[0] as usize) < nenc || r[0] == 0xFF) && (r[0x12] as usize) < nplaces && u16le(r, 0x0A) < 829
+    });
+    let mut best = (0, 0);
+    for phase in (0..24).step_by(4) {
+        let (mut start, mut n) = (phase, 0);
+        let mut o = phase;
+        while o + 24 <= arm9.len() {
+            if ok(o) {
+                if n == 0 { start = o; }
+                n += 1;
+                if n > best.1 { best = (start, n); }
+            } else {
+                n = 0;
+            }
+            o += 24;
+        }
+    }
+    (best.1 >= 300).then_some(best)
+}
+
 /// Level-up learnsets from an HGSS ROM (a/0/3/3): species -> [(level, move id)].
 /// Each entry is a u16 `move | level << 9`, list ends with 0xFFFF.
 pub fn hgss_learnsets(rom: &[u8]) -> Option<std::collections::HashMap<u16, Vec<(u8, u16)>>> {
@@ -211,4 +279,20 @@ fn unpack9(units: Vec<u16>) -> Vec<u16> {
         }
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    /// Needs a German SoulSilver ROM; set PKMN_ROM to its path, otherwise the test is skipped.
+    #[test]
+    fn wild_pokemon_from_rom() {
+        let Ok(path) = std::env::var("PKMN_ROM") else { return };
+        let rom = std::fs::read(path).unwrap();
+        let wild = super::hgss_wild(&rom);
+        // Taubsi (16) on Route 29 from level 2; Hoothoot (163) there at night.
+        assert!(wild[&16].iter().any(|w| w.place == "Route 29" && w.level == 2), "{:?}", wild.get(&16));
+        assert!(wild[&163].iter().any(|w| w.place == "Route 29"));
+        assert!(wild[&16].iter().any(|w| w.place == "Route 1" && w.late));
+        assert!(wild.len() > 100, "only {} species", wild.len());
+    }
 }

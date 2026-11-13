@@ -31,6 +31,7 @@ struct RomData {
     level_up: HashMap<u16, Vec<(u8, u16)>>,
     evolutions: HashMap<u16, Vec<(u16, EvoHow)>>,
     trainers: Vec<Boss>,
+    wild: HashMap<u16, Vec<crate::data::WildSpot>>,
 }
 
 pub struct App {
@@ -272,7 +273,7 @@ impl App {
             let game = "heartgold-soulsilver";
             let mut bosses = self.dex.bosses.iter().find(|g| g.id == game).map(|g| g.bosses.clone()).unwrap_or_default();
             rom::apply_rom_teams(&bytes, game, &mut bosses, &self.dex)?;
-            Ok(RomData { bosses, level_up: rom::hgss_learnsets(&bytes).unwrap_or_default(), evolutions: rom::hgss_evolutions(&bytes).unwrap_or_default(), trainers: rom::hgss_trainers(&bytes, &self.dex) })
+            Ok(RomData { bosses, level_up: rom::hgss_learnsets(&bytes).unwrap_or_default(), evolutions: rom::hgss_evolutions(&bytes).unwrap_or_default(), trainers: rom::hgss_trainers(&bytes, &self.dex), wild: rom::hgss_wild(&bytes) })
         });
         match result {
             Ok(r) => {
@@ -298,6 +299,7 @@ impl App {
             if !r.level_up.is_empty() { self.learn.level_up = r.level_up.clone(); }
             if !r.evolutions.is_empty() { self.learn.evolutions = r.evolutions.clone(); }
             self.trainers = r.trainers.clone();
+            self.learn.wild = r.wild.clone();
         }
         self.data_key = key;
     }
@@ -853,7 +855,10 @@ impl App {
             card(ui, |ui| ui.label(t(l, "No single typing improves the team; work on moves and levels.", "Kein Typ verbessert das Team; arbeite an Attacken und Leveln.")));
             return;
         }
-        let note = if self.national_dex || self.learn.regional.is_empty() {
+        let note = if !self.national_dex && !self.learn.wild.is_empty() {
+            t(l, "Only Pokémon you can catch in the wild in your ROM, or evolve one into. Place and level come from the ROM; ones you can get soon come first.",
+                "Nur Pokémon, die du in deiner ROM wild fangen kannst oder durch Entwicklung bekommst. Ort und Level stammen aus der ROM; was du bald bekommst, steht vorn.")
+        } else if self.national_dex || self.learn.regional.is_empty() {
             t(l, "Examples come from every Pokémon up to this generation; not all of them can be caught in your game.",
                 "Beispiele aus allen Pokémon bis zu dieser Generation; nicht alle sind in deinem Spiel fangbar.")
         } else {
@@ -861,6 +866,27 @@ impl App {
                 "Nur Pokémon aus dem Pokédex dieses Spiels (auch solche, die man durch Entwicklung bekommt). Ein ROM-Hack kann andere verteilen.")
         };
         ui.label(RichText::new(note).color(MUTED));
+        // The single best pick for a free slot, with where to get it.
+        if let Some(c) = r.catch.iter().find(|c| c.replacing.is_none()) {
+            let slot = self.team.len() + 1;
+            card(ui, |ui| {
+                ui.horizontal(|ui| {
+                    self.species_sprite(ui, c.examples[0], 96.0);
+                    ui.vertical(|ui| {
+                        ui.label(RichText::new(format!("{} {slot}", t(l, "Pick for slot", "Empfehlung für Platz"))).color(MUTED));
+                        ui.horizontal(|ui| {
+                            ui.label(RichText::new(self.sname(c.examples[0])).size(22.0).strong());
+                            self.types_row(ui, &c.types);
+                            ui.label(RichText::new(format!("+{}", c.gain)).size(18.0).strong().color(GOOD));
+                        });
+                        if let Some(Some((src, w))) = c.spots.first() {
+                            ui.label(RichText::new(self.spot_text(*src, c.examples[0], w)).size(15.0));
+                        }
+                    });
+                });
+            });
+            ui.add_space(6.0);
+        }
         let items: Vec<_> = r.catch.iter().collect();
         card_rows(ui, &items, 540.0, |ui, &c| {
             card(ui, |ui| {
@@ -875,10 +901,14 @@ impl App {
                         }
                     });
                     ui.add_space(12.0);
-                    for &id in &c.examples {
+                    for (k, &id) in c.examples.iter().enumerate() {
                         ui.vertical(|ui| {
                             self.species_sprite(ui, id, 64.0);
                             ui.label(RichText::new(self.sname(id)).small());
+                            if let Some(Some((_, w))) = c.spots.get(k) {
+                                ui.label(RichText::new(format!("{} · Lv {}", w.place, w.level)).small().color(if w.late { BAD } else { MUTED }))
+                                    .on_hover_text(self.spot_text(c.spots[k].as_ref().unwrap().0, id, w));
+                            }
                         });
                     }
                 });
@@ -958,6 +988,21 @@ impl App {
         {
             self.trainer_limit += 30;
         }
+    }
+
+    /// "Catch X on Route 32 (grass, from Lv 6)", naming the earlier form when you evolve it yourself.
+    fn spot_text(&self, src: u16, target: u16, w: &crate::data::WildSpot) -> String {
+        use crate::data::CatchHow::*;
+        let l = self.lang;
+        let how = match w.how {
+            Grass => t(l, "grass", "Gras").to_string(),
+            Surf => self.mname(57),
+            RockSmash => self.mname(249),
+            Rod => t(l, "fishing", "Angeln").to_string(),
+        };
+        let evolve = if src != target { format!(", {} {}", t(l, "evolve it into", "entwickeln zu"), self.sname(target)) } else { String::new() };
+        let late = if w.late { t(l, " (only after the Pokémon League)", " (erst nach der Pokémon-Liga)") } else { "" };
+        format!("{} {} {} {} ({}, {} Lv {}){evolve}{late}", t(l, "Catch", "Fange"), self.sname(src), t(l, "at", "bei"), w.place, how, t(l, "from", "ab"), w.level)
     }
 
     /// Spoiler protection status, with a confirm dialog before revealing upcoming teams.

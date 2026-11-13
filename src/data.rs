@@ -369,7 +369,22 @@ pub struct Learnsets {
     pub evolutions: HashMap<u16, Vec<(u16, EvoHow)>>,
     /// species in this game's own Pokédex (empty = unknown)
     pub regional: std::collections::HashSet<u16>,
+    /// species -> where it can be caught in the wild, lowest level first (from a ROM; empty = unknown)
+    pub wild: HashMap<u16, Vec<WildSpot>>,
 }
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct WildSpot {
+    /// place name as the ROM writes it
+    pub place: String,
+    pub level: u8,
+    pub how: CatchHow,
+    /// only reachable after the Pokémon League (Kanto, Silberberg)
+    pub late: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum CatchHow { Grass, Surf, RockSmash, Rod }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum EvoHow {

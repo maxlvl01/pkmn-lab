@@ -1,6 +1,6 @@
 //! Team analysis: type matchups, coverage, rating, projection, recommendations, boss matchups.
 //! Returns plain data (ids, numbers); the UI turns it into German or English text.
-use crate::data::{Boss, Dex, EvoHow, Learnsets, Move, VersionGroup};
+use crate::data::{Boss, Dex, EvoHow, Learnsets, Move, VersionGroup, WildSpot};
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
@@ -122,6 +122,8 @@ pub struct CatchRec {
     pub gain: i32,
     pub types: Vec<u8>,
     pub examples: Vec<u16>,
+    /// per example: what to catch (itself or an earlier form) and its earliest spot; None = no wild data
+    pub spots: Vec<Option<(u16, WildSpot)>>,
     pub replacing: Option<usize>,
 }
 
@@ -307,7 +309,7 @@ pub fn analyse(dex: &Dex, game: &Game, team: &[Mon], focus: Option<usize>) -> Re
         potential: later.rating_after,
         potential_level: later.target,
         projection: project(dex, game, team, &ahead, focus),
-        catch: recommend(dex, gn, &fighters, (game.regional && !game.learn.regional.is_empty()).then_some(&game.learn.regional)),
+        catch: recommend(dex, gn, &fighters, game, team.iter().map(|m| m.level).max().unwrap_or(1)),
         bosses: bosses(dex, game, team, &ahead, false),
         beaten_bosses: bosses(dex, game, team, &done, true),
         trainers: trainers(dex, game, team),
@@ -315,8 +317,28 @@ pub fn analyse(dex: &Dex, game: &Game, team: &[Mon], focus: Option<usize>) -> Re
 }
 
 /// Try every typing that exists in this gen as a new member (or as a swap if the team is full).
-/// `pool`: only these species (the game's regional Pokédex); typings nobody in it has are not suggested.
-fn recommend(dex: &Dex, gn: u8, fighters: &[Fighter], pool: Option<&HashSet<u16>>) -> Vec<CatchRec> {
+/// Regional mode: only Pokémon you can catch in the wild (from the ROM) or evolve them into, else the regional Pokédex.
+/// Examples you can catch soon (spot level up to your top level + 10) come first, then the strongest.
+fn recommend(dex: &Dex, gn: u8, fighters: &[Fighter], game: &Game, our_max: u8) -> Vec<CatchRec> {
+    let learn = game.learn;
+    let parent: HashMap<u16, u16> = learn.evolutions.iter().flat_map(|(&from, tos)| tos.iter().map(move |&(to, _)| (to, from))).collect();
+    // Earliest wild spot of a species or any earlier form of it.
+    let spot = |sp: u16| -> Option<(u16, WildSpot)> {
+        let mut best: Option<(u16, WildSpot)> = None;
+        let mut cur = Some(sp);
+        for _ in 0..4 {
+            let Some(s) = cur else { break };
+            if let Some(w) = learn.wild.get(&s).and_then(|v| v.first())
+                && best.as_ref().is_none_or(|b| (w.late, w.level) < (b.1.late, b.1.level)) { best = Some((s, w.clone())); }
+            cur = parent.get(&s).copied();
+        }
+        best
+    };
+    let pool: Option<HashSet<u16>> = if !game.regional { None }
+        else if !learn.wild.is_empty() { Some(dex.species.keys().copied().filter(|&s| spot(s).is_some()).collect()) }
+        else if !learn.regional.is_empty() { Some(learn.regional.clone()) }
+        else { None };
+    let pool = pool.as_ref();
     let base = summarize(dex, fighters, gn).rating as i32;
     let mut typings: BTreeMap<Vec<u8>, Vec<u16>> = BTreeMap::new();
     for s in dex.species.values().filter(|s| s.gn <= gn && pool.is_none_or(|p| p.contains(&s.id))) {
@@ -339,10 +361,12 @@ fn recommend(dex: &Dex, gn: u8, fighters: &[Fighter], pool: Option<&HashSet<u16>
     for (gain, ts, replacing) in scored {
         if gain <= 0 || out.len() == 5 || out.iter().any(|c| c.types == ts) { continue; }
         let mut examples = typings[&ts].clone();
-        // Strongest first; legendaries included, the user can skip them.
-        examples.sort_by_key(|id| std::cmp::Reverse(dex.species[id].base_stats.iter().sum::<u16>()));
+        let soon = |id: &u16| spot(*id).is_none_or(|s| !s.1.late && s.1.level <= our_max.saturating_add(10));
+        // Catchable soon first, then strongest; legendaries included, the user can skip them.
+        examples.sort_by_key(|id| (!soon(id), std::cmp::Reverse(dex.species[id].base_stats.iter().sum::<u16>())));
         examples.truncate(5);
-        out.push(CatchRec { gain, types: ts, examples, replacing });
+        let spots = examples.iter().map(|&id| spot(id)).collect();
+        out.push(CatchRec { gain, types: ts, examples, spots, replacing });
     }
     out
 }
