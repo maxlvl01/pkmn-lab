@@ -37,6 +37,8 @@ pub struct Move {
     /// None = never misses
     pub accuracy: Option<u8>,
     pub class: u8, // 1 status, 2 physical, 3 special
+    /// generation the move first appeared in
+    pub gn: u8,
     changes: Vec<(u16, Option<u8>, Option<u16>)>, // (changed-in version group order, old type, old power)
 }
 
@@ -255,6 +257,7 @@ impl Dex {
                 power: num(&r, "power"),
                 accuracy: num(&r, "accuracy"),
                 class: num(&r, "damage_class_id").unwrap_or(1),
+                gn: num(&r, "generation_id").unwrap_or(1),
                 changes: vec![],
             });
         }
@@ -369,6 +372,8 @@ pub struct Learnsets {
     pub evolutions: HashMap<u16, Vec<(u16, EvoHow)>>,
     /// species in this game's own Pokédex (empty = unknown)
     pub regional: std::collections::HashSet<u16>,
+    /// species -> its number in that Pokédex (roughly the order you meet them)
+    pub regional_no: HashMap<u16, u16>,
     /// species -> where it can be caught in the wild, lowest level first (from a ROM; empty = unknown)
     pub wild: HashMap<u16, Vec<WildSpot>>,
 }
@@ -447,10 +452,13 @@ impl Dex {
         // Regional Pokédex: all dexes PokeAPI links to this version group (X/Y has three Kalos parts, etc.).
         let dexes: Vec<&str> = scan(csv_file!("pokedex_version_groups"), &["pokedex_id", "version_group_id"])
             .filter(|f| f[1] == vg_id).map(|f| f[0]).collect();
-        ls.regional = scan(csv_file!("pokemon_dex_numbers"), &["species_id", "pokedex_id"])
-            .filter(|f| dexes.contains(&f[1]))
-            .filter_map(|f| f[0].parse().ok())
-            .collect();
+        for f in scan(csv_file!("pokemon_dex_numbers"), &["species_id", "pokedex_id", "pokedex_number"]).filter(|f| dexes.contains(&f[1])) {
+            if let (Ok(sp), Ok(no)) = (f[0].parse::<u16>(), f[2].parse::<u16>()) {
+                let e = ls.regional_no.entry(sp).or_insert(no);
+                *e = (*e).min(no);
+            }
+        }
+        ls.regional = ls.regional_no.keys().copied().collect();
         ls
     }
 }

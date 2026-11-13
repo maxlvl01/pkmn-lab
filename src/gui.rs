@@ -279,6 +279,10 @@ impl App {
             Ok(r) => {
                 self.rom = Some(r);
                 self.rom_path = Some(path.into());
+                if self.game_id != "heartgold-soulsilver" {
+                    self.game_id = "heartgold-soulsilver".into();
+                    self.badges.clear();
+                }
                 self.dirty = true;
                 self.message = Some((false, format!("{} {}", t(self.lang, "ROM loaded:", "ROM geladen:"), file_name(path))));
             }
@@ -398,7 +402,22 @@ impl App {
             if ui.add_sized([ui.available_width(), 32.0], egui::Button::new(t(l, "Open save file …", "Spielstand öffnen …"))).clicked() {
                 self.open_save_dialog();
             }
-            if let Some(p) = &self.save_path { ui.label(RichText::new(file_name(p)).color(MUTED).small()); }
+            if let Some(p) = self.save_path.clone() {
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new(file_name(&p)).color(MUTED).small());
+                    if ui.small_button(t(l, "Close", "Schließen"))
+                        .on_hover_text(t(l, "Forget this save: the team stays and can be edited, and the game can be chosen again.",
+                            "Spielstand vergessen: das Team bleibt und lässt sich ändern, das Spiel ist wieder wählbar."))
+                        .clicked()
+                    {
+                        self.save_path = None;
+                        self.trainer = None;
+                        self.owned_tms = None;
+                        self.beaten = None;
+                        self.dirty = true;
+                    }
+                });
+            }
             ui.label(RichText::new(t(l, "or drag it into the window", "oder einfach ins Fenster ziehen")).color(MUTED).small());
             ui.add_space(4.0);
             if ui.add_sized([ui.available_width(), 28.0], egui::Button::new(t(l, "Open ROM … (optional)", "ROM öffnen … (optional)"))).clicked() {
@@ -406,25 +425,46 @@ impl App {
                     self.load_rom(&p.to_string_lossy());
                 }
             }
-            let rom_note = match &self.rom_path {
-                Some(p) => file_name(p),
-                None => t(l, "HeartGold/SoulSilver: real boss teams and level-up moves, also for ROM hacks",
-                    "HeartGold/SoulSilver: echte Boss-Teams und Level-Attacken, auch bei ROM-Hacks").into(),
-            };
-            ui.label(RichText::new(rom_note).color(MUTED).small());
+            match self.rom_path.clone() {
+                Some(p) => {
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new(file_name(&p)).color(MUTED).small());
+                        if ui.small_button(t(l, "Close", "Schließen")).clicked() {
+                            self.rom = None;
+                            self.rom_path = None;
+                            self.dirty = true;
+                        }
+                    });
+                }
+                None => {
+                    ui.label(RichText::new(t(l, "HeartGold/SoulSilver: real boss teams, all trainers and wild Pokémon, also for ROM hacks",
+                        "HeartGold/SoulSilver: echte Boss-Teams, alle Trainer und wilde Pokémon, auch bei ROM-Hacks")).color(MUTED).small());
+                }
+            }
 
             ui.add_space(10.0);
             ui.separator();
             heading(ui, t(l, "Game", "Spiel"));
             let current = self.dex.vg(&self.game_id).map(|v| l.pick(&v.name_en, &v.name_de).to_string()).unwrap_or_default();
             let mut chosen = self.game_id.clone();
-            egui::ComboBox::from_id_salt("game").width(ui.available_width()).selected_text(current).show_ui(ui, |ui| {
-                for g in &self.dex.bosses {
-                    if let Some(v) = self.dex.vg(&g.id) {
-                        ui.selectable_value(&mut chosen, g.id.clone(), format!("{}  (Gen {})", l.pick(&v.name_en, &v.name_de), v.gn));
+            let locked = self.save_path.is_some() || self.rom_path.is_some();
+            ui.add_enabled_ui(!locked, |ui| {
+                egui::ComboBox::from_id_salt("game").width(ui.available_width()).selected_text(current).show_ui(ui, |ui| {
+                    for g in &self.dex.bosses {
+                        if let Some(v) = self.dex.vg(&g.id) {
+                            let label = format!("{}  (Gen {})", l.pick(&v.name_en, &v.name_de), v.gn);
+                            match self.not_in_game(v.gn) {
+                                None => { ui.selectable_value(&mut chosen, g.id.clone(), label); }
+                                Some(why) => { ui.add_enabled(false, egui::Button::selectable(false, label)).on_disabled_hover_text(why); }
+                            }
+                        }
                     }
-                }
-            });
+                });
+            }).response.on_disabled_hover_text(t(l, "Set by your save / ROM. Close it above to choose another game.",
+                "Vom Spielstand / der ROM festgelegt. Schließe sie oben, um ein anderes Spiel zu wählen."));
+            if locked {
+                ui.label(RichText::new(t(l, "Set by your save / ROM", "Vom Spielstand / der ROM festgelegt")).color(MUTED).small());
+            }
             if chosen != self.game_id {
                 self.game_id = chosen;
                 self.badges.clear();
@@ -450,6 +490,20 @@ impl App {
                 .color(MUTED).small());
             self.team_editor(ui);
         });
+    }
+
+    /// Why the team can't be used in a game of generation `gn` (a Pokémon or move from a later generation), if so.
+    fn not_in_game(&self, gn: u8) -> Option<String> {
+        let l = self.lang;
+        for m in self.team.iter().filter(|m| m.species != 0) {
+            if let Some(s) = self.dex.species.get(&m.species).filter(|s| s.gn > gn) {
+                return Some(format!("{} {} {}", self.sname(s.id), t(l, "only exists from Gen", "gibt es erst ab Gen"), s.gn));
+            }
+            if let Some(mv) = m.moves.iter().filter_map(|id| self.dex.moves.get(id)).find(|mv| mv.gn > gn) {
+                return Some(format!("{} ({}) {} {}", self.mname(mv.id), self.sname(m.species), t(l, "only exists from Gen", "gibt es erst ab Gen"), mv.gn));
+            }
+        }
+        None
     }
 
     fn team_editor(&mut self, ui: &mut Ui) {
@@ -866,27 +920,29 @@ impl App {
                 "Nur Pokémon aus dem Pokédex dieses Spiels (auch solche, die man durch Entwicklung bekommt). Ein ROM-Hack kann andere verteilen.")
         };
         ui.label(RichText::new(note).color(MUTED));
-        // The single best pick for a free slot, with where to get it.
-        if let Some(c) = r.catch.iter().find(|c| c.replacing.is_none()) {
-            let slot = self.team.len() + 1;
-            card(ui, |ui| {
-                ui.horizontal(|ui| {
-                    self.species_sprite(ui, c.examples[0], 96.0);
-                    ui.vertical(|ui| {
-                        ui.label(RichText::new(format!("{} {slot}", t(l, "Pick for slot", "Empfehlung für Platz"))).color(MUTED));
-                        ui.horizontal(|ui| {
-                            ui.label(RichText::new(self.sname(c.examples[0])).size(22.0).strong());
-                            self.types_row(ui, &c.types);
-                            ui.label(RichText::new(format!("+{}", c.gain)).size(18.0).strong().color(GOOD));
-                        });
-                        if let Some(Some((src, w))) = c.spots.first() {
-                            ui.label(RichText::new(self.spot_text(*src, c.examples[0], w)).size(15.0));
-                        }
-                    });
-                });
-            });
-            ui.add_space(6.0);
-        }
+        // For a free slot: the next good Pokémon you can get, and the strongest one if that is a different one.
+        let slot = self.team.len() + 1;
+        let strongest = r.catch.iter().find(|c| c.replacing.is_none());
+        ui.horizontal_wrapped(|ui| {
+            if let Some(p) = &r.next_pick {
+                let detail = match (&p.spot, p.dex_no) {
+                    (Some((src, w)), _) => self.spot_text(*src, p.species, w),
+                    (None, Some(n)) => format!("{} {n}{}", t(l, "Pokédex no.", "Pokédex Nr."),
+                        t(l, " — rough order; load the ROM for places and levels", " – grobe Reihenfolge; lade die ROM für Fundorte und Level")),
+                    _ => String::new(),
+                };
+                self.pick_card(ui, &format!("{} {slot}", t(l, "Next for slot", "Als Nächstes für Platz")), p.species, &p.types, p.gain, &detail);
+            }
+            if let Some(c) = strongest.filter(|c| r.next_pick.as_ref().is_none_or(|p| p.species != c.examples[0])) {
+                let detail = match c.spots.first() {
+                    Some(Some((src, w))) => self.spot_text(*src, c.examples[0], w),
+                    _ => String::new(),
+                };
+                let title = if r.next_pick.is_some() { t(l, "Strongest choice", "Stärkste Wahl").to_string() } else { format!("{} {slot}", t(l, "Pick for slot", "Empfehlung für Platz")) };
+                self.pick_card(ui, &title, c.examples[0], &c.types, c.gain, &detail);
+            }
+        });
+        ui.add_space(6.0);
         let items: Vec<_> = r.catch.iter().collect();
         card_rows(ui, &items, 540.0, |ui, &c| {
             card(ui, |ui| {
@@ -988,6 +1044,24 @@ impl App {
         {
             self.trainer_limit += 30;
         }
+    }
+
+    fn pick_card(&self, ui: &mut Ui, title: &str, species: u16, types: &[u8], gain: i32, detail: &str) {
+        card(ui, |ui| {
+            ui.set_width(540.0);
+            ui.horizontal(|ui| {
+                self.species_sprite(ui, species, 96.0);
+                ui.vertical(|ui| {
+                    ui.label(RichText::new(title).color(MUTED));
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new(self.sname(species)).size(22.0).strong());
+                        self.types_row(ui, types);
+                        ui.label(RichText::new(format!("+{gain}")).size(18.0).strong().color(GOOD));
+                    });
+                    if !detail.is_empty() { ui.add(egui::Label::new(RichText::new(detail).size(15.0)).wrap()); }
+                });
+            });
+        });
     }
 
     /// "Catch X on Route 32 (grass, from Lv 6)", naming the earlier form when you evolve it yourself.

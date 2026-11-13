@@ -45,6 +45,7 @@ pub struct Report {
     pub potential_level: u8,
     pub projection: Projection,
     pub catch: Vec<CatchRec>,
+    pub next_pick: Option<NextPick>,
     pub bosses: Vec<BossView>,
     /// bosses already beaten (badge or save flag), story order
     pub beaten_bosses: Vec<BossView>,
@@ -116,6 +117,17 @@ pub struct Projection {
     pub for_boss: Option<usize>,
     pub members: Vec<ProjMember>,
     pub rating_after: u32,
+}
+
+/// The first good Pokémon you can get for a free slot.
+pub struct NextPick {
+    pub species: u16,
+    pub types: Vec<u8>,
+    pub gain: i32,
+    /// what to catch (itself or an earlier form) and where; None without wild data
+    pub spot: Option<(u16, WildSpot)>,
+    /// number in the game's own Pokédex (earliest form), the rough order without a ROM
+    pub dex_no: Option<u16>,
 }
 
 pub struct CatchRec {
@@ -296,6 +308,7 @@ pub fn analyse(dex: &Dex, game: &Game, team: &[Mon], focus: Option<usize>) -> Re
     let done: Vec<usize> = (0..game.bosses.len()).filter(|i| !ahead.contains(i) && !game.bosses[*i].team.is_empty()).collect();
     // Future potential: the team as it can be by the last boss ahead (evolved, its best moves by then).
     let later = project(dex, game, team, &ahead, ahead.last().copied());
+    let (catch, next_pick) = recommend(dex, gn, &fighters, game, team.iter().map(|m| m.level).max().unwrap_or(1));
     let summary = Summary { rating: (now.rating as f32 * 0.6 + later.rating_after as f32 * 0.4).round() as u32, ..now };
     Report {
         members,
@@ -309,7 +322,8 @@ pub fn analyse(dex: &Dex, game: &Game, team: &[Mon], focus: Option<usize>) -> Re
         potential: later.rating_after,
         potential_level: later.target,
         projection: project(dex, game, team, &ahead, focus),
-        catch: recommend(dex, gn, &fighters, game, team.iter().map(|m| m.level).max().unwrap_or(1)),
+        catch,
+        next_pick,
         bosses: bosses(dex, game, team, &ahead, false),
         beaten_bosses: bosses(dex, game, team, &done, true),
         trainers: trainers(dex, game, team),
@@ -319,7 +333,7 @@ pub fn analyse(dex: &Dex, game: &Game, team: &[Mon], focus: Option<usize>) -> Re
 /// Try every typing that exists in this gen as a new member (or as a swap if the team is full).
 /// Regional mode: only Pokémon you can catch in the wild (from the ROM) or evolve them into, else the regional Pokédex.
 /// Examples you can catch soon (spot level up to your top level + 10) come first, then the strongest.
-fn recommend(dex: &Dex, gn: u8, fighters: &[Fighter], game: &Game, our_max: u8) -> Vec<CatchRec> {
+fn recommend(dex: &Dex, gn: u8, fighters: &[Fighter], game: &Game, our_max: u8) -> (Vec<CatchRec>, Option<NextPick>) {
     let learn = game.learn;
     let parent: HashMap<u16, u16> = learn.evolutions.iter().flat_map(|(&from, tos)| tos.iter().map(move |&(to, _)| (to, from))).collect();
     // Earliest wild spot of a species or any earlier form of it.
@@ -357,6 +371,24 @@ fn recommend(dex: &Dex, gn: u8, fighters: &[Fighter], game: &Game, our_max: u8) 
         }
     }
     scored.sort_by_key(|s| std::cmp::Reverse(s.0));
+    let bst = |id: u16| dex.species[&id].base_stats.iter().sum::<u16>();
+    // Next pick for a free slot: the earliest Pokémon you can get whose typing gives at least 60 % of the best gain.
+    // shortcut: "earliest" = wild spot (post-league last, anything up to your level counts as now), else the
+    // regional Pokédex number of its earliest form; a story-order table per game would be more exact.
+    let next_pick = if fighters.len() < 6 {
+        let gain_of: HashMap<&Vec<u8>, i32> = scored.iter().filter(|s| s.2.is_none()).map(|s| (&s.1, s.0)).collect();
+        let best = gain_of.values().copied().max().unwrap_or(0);
+        let dex_no = |sp: u16| std::iter::successors(Some(sp), |s| parent.get(s).copied()).take(4)
+            .filter_map(|s| learn.regional_no.get(&s).copied()).min();
+        let when = |sp: u16| -> Option<(bool, u16)> {
+            if !learn.wild.is_empty() { spot(sp).map(|(_, w)| (w.late, w.level.max(our_max) as u16)) } else { dex_no(sp).map(|n| (false, n)) }
+        };
+        typings.iter()
+            .filter_map(|(ts, ids)| gain_of.get(ts).filter(|&&g| g > 0 && g * 10 >= best * 6).map(|&g| (ts, g, ids)))
+            .flat_map(|(ts, g, ids)| ids.iter().filter_map(move |&id| Some((when(id)?, std::cmp::Reverse(g), std::cmp::Reverse(bst(id)), id, ts))))
+            .min()
+            .map(|(_, g, _, id, ts)| NextPick { species: id, types: ts.clone(), gain: g.0, spot: spot(id), dex_no: dex_no(id) })
+    } else { None };
     let mut out: Vec<CatchRec> = vec![];
     for (gain, ts, replacing) in scored {
         if gain <= 0 || out.len() == 5 || out.iter().any(|c| c.types == ts) { continue; }
@@ -368,7 +400,7 @@ fn recommend(dex: &Dex, gn: u8, fighters: &[Fighter], game: &Game, our_max: u8) 
         let spots = examples.iter().map(|&id| spot(id)).collect();
         out.push(CatchRec { gain, types: ts, examples, spots, replacing });
     }
-    out
+    (out, next_pick)
 }
 
 /// Stats at a level: average IVs (15), no EVs, neutral nature.
@@ -669,5 +701,29 @@ mod tests {
         assert!(g.could.contains(&(76, crate::data::EvoHow::Trade)));
         assert_eq!(r2.projection.members[1].growth.species, 160);
         assert_eq!(r2.bosses.last().unwrap().team[1].0, 160); // the boss verdict uses the evolved team
+    }
+
+    #[test]
+    fn next_pick_prefers_what_you_get_first() {
+        let dex = Dex::load();
+        let vg = dex.vg("heartgold-soulsilver").unwrap();
+        let learn = dex.learnsets(vg);
+        let bosses = dex.bosses.iter().find(|g| g.id == vg.ident).unwrap().bosses.clone();
+        let team = vec![Mon { species: 158, level: 10, moves: vec![], nickname: None }];
+        let game = Game { vg, bosses: &bosses, badges: &[], learn: &learn, owned_machines: None, regional: true, trainers: &[], beaten: None };
+        let r = analyse(&dex, &game, &team, None);
+        // Without a ROM: rough order by Johto Pokédex number, never later than the strongest tip's.
+        let p = r.next_pick.as_ref().unwrap();
+        let strongest = r.catch[0].examples[0];
+        assert!(p.dex_no.unwrap() <= *learn.regional_no.get(&strongest).unwrap_or(&999));
+        // With wild data: a reachable spot beats a post-league one.
+        use crate::data::{CatchHow, WildSpot};
+        let w = |level, late| vec![WildSpot { place: "X".into(), level, how: CatchHow::Grass, late }];
+        let mut wild_learn = dex.learnsets(vg);
+        wild_learn.wild = HashMap::from([(66, w(60, true)), (16, w(3, false)), (74, w(5, false))]);
+        let game = Game { learn: &wild_learn, ..game };
+        let r = analyse(&dex, &game, &team, None);
+        let p = r.next_pick.unwrap();
+        assert!(p.spot.is_some_and(|(_, s)| !s.late), "{}", p.species);
     }
 }
