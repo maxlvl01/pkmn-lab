@@ -1,0 +1,15 @@
+[package]
+name = "pkmn-lab"
+version = "0.1.0"
+edition = "2024"
+description = "Team analyser for Pokémon runs: reads emulator saves, rates your team, plans the next bosses"
+repository = "https://github.com/maxlvl01/pkmn-lab"
+
+[dependencies]
+csv = "1.4.0"
+eframe = { version = "0.37.0", default-features = false, features = ["default_fonts", "glow", "persistence"] }
+egui_extras = { version = "0.37", default-features = false, features = ["file", "image"] }
+image = { version = "0.25.10", default-features = false, features = ["png"] }
+rfd = "0.18.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"

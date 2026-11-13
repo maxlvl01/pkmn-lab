@@ -1,0 +1,6515 @@
+{
+ "source_notes": "2026-11-13. German names (boss, cities), specialty types, teams, levels, moves: PokeWiki (pokewiki.de) article wikitext (Team/Zeile tables, infobox Name_en used to cross-check each English name); German move names mapped to PokeAPI identifiers with PokeAPI's move_names.csv. English location names from standard game names (not cross-checked online; Bulbapedia/Serebii blocked or 404 for automated fetch). Gym-leader teams are first battle only (rematches excluded); Gen5 B2W2 / SM / USUM teams use the Standard difficulty (first toggle) row; E4 teams are first round. Moves are empty arrays where the source lists none (e.g. Let's Go, several SwSh/SV leaders). Types of Champions (Alder, Kukui, Hau, Trace, Leon, Geeta) follow PokeWiki's infobox and are only nominal.",
+ "games": [
+  {
+   "id": "black-white",
+   "gen": 5,
+   "name": "Pokémon Schwarz / Weiß (Black/White)",
+   "bosses": [
+    {
+     "kind": "gym",
+     "order": 1,
+     "name_en": "Cilan",
+     "name_de": "Benny",
+     "type": "grass",
+     "location_en": "Striaton City",
+     "location_de": "Orion City",
+     "variant": "if starter is Oshawott",
+     "team": [
+      {
+       "dex": 506,
+       "level": 12,
+       "moves": [
+        "bite",
+        "work-up",
+        "odor-sleuth",
+        "helping-hand"
+       ]
+      },
+      {
+       "dex": 511,
+       "level": 14,
+       "moves": [
+        "work-up",
+        "lick",
+        "fury-swipes",
+        "vine-whip"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 1,
+     "name_en": "Chili",
+     "name_de": "Maik",
+     "type": "fire",
+     "location_en": "Striaton City",
+     "location_de": "Orion City",
+     "variant": "if starter is Snivy",
+     "team": [
+      {
+       "dex": 506,
+       "level": 12,
+       "moves": [
+        "bite",
+        "work-up",
+        "odor-sleuth",
+        "helping-hand"
+       ]
+      },
+      {
+       "dex": 513,
+       "level": 14,
+       "moves": [
+        "work-up",
+        "lick",
+        "fury-swipes",
+        "incinerate"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 1,
+     "name_en": "Cress",
+     "name_de": "Colin",
+     "type": "water",
+     "location_en": "Striaton City",
+     "location_de": "Orion City",
+     "variant": "if starter is Tepig",
+     "team": [
+      {
+       "dex": 506,
+       "level": 12,
+       "moves": [
+        "bite",
+        "work-up",
+        "odor-sleuth",
+        "helping-hand"
+       ]
+      },
+      {
+       "dex": 515,
+       "level": 14,
+       "moves": [
+        "work-up",
+        "lick",
+        "fury-swipes",
+        "water-gun"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 2,
+     "name_en": "Lenora",
+     "name_de": "Aloe",
+     "type": "normal",
+     "location_en": "Nacrene City",
+     "location_de": "Septerna City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 507,
+       "level": 18,
+       "moves": [
+        "take-down",
+        "bite",
+        "retaliate",
+        "leer"
+       ]
+      },
+      {
+       "dex": 505,
+       "level": 20,
+       "moves": [
+        "leer",
+        "crunch",
+        "retaliate",
+        "hypnosis"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 3,
+     "name_en": "Burgh",
+     "name_de": "Artie",
+     "type": "bug",
+     "location_en": "Castelia City",
+     "location_de": "Stratos City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 544,
+       "level": 21,
+       "moves": [
+        "poison-tail",
+        "struggle-bug",
+        "pursuit",
+        "screech"
+       ]
+      },
+      {
+       "dex": 557,
+       "level": 21,
+       "moves": [
+        "smack-down",
+        "struggle-bug",
+        "feint-attack",
+        "sand-attack"
+       ]
+      },
+      {
+       "dex": 542,
+       "level": 23,
+       "moves": [
+        "razor-leaf",
+        "struggle-bug",
+        "string-shot",
+        "protect"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 4,
+     "name_en": "Elesa",
+     "name_de": "Kamilla",
+     "type": "electric",
+     "location_en": "Nimbasa City",
+     "location_de": "Rayono City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 587,
+       "level": 25,
+       "moves": [
+        "pursuit",
+        "quick-attack",
+        "volt-switch",
+        "aerial-ace"
+       ]
+      },
+      {
+       "dex": 587,
+       "level": 25,
+       "moves": [
+        "pursuit",
+        "quick-attack",
+        "volt-switch",
+        "aerial-ace"
+       ]
+      },
+      {
+       "dex": 523,
+       "level": 27,
+       "moves": [
+        "quick-attack",
+        "spark",
+        "volt-switch",
+        "flame-charge"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 5,
+     "name_en": "Clay",
+     "name_de": "Turner",
+     "type": "ground",
+     "location_en": "Driftveil City",
+     "location_de": "Marea City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 552,
+       "level": 29,
+       "moves": [
+        "crunch",
+        "swagger",
+        "bulldoze",
+        "torment"
+       ]
+      },
+      {
+       "dex": 536,
+       "level": 29,
+       "moves": [
+        "muddy-water",
+        "aqua-ring",
+        "bulldoze",
+        "bubble-beam"
+       ]
+      },
+      {
+       "dex": 530,
+       "level": 31,
+       "moves": [
+        "slash",
+        "rock-slide",
+        "bulldoze",
+        "hone-claws"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 6,
+     "name_en": "Skyla",
+     "name_de": "Géraldine",
+     "type": "flying",
+     "location_en": "Mistralton City",
+     "location_de": "Panaero City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 528,
+       "level": 33,
+       "moves": [
+        "heart-stamp",
+        "amnesia",
+        "acrobatics",
+        "assurance"
+       ]
+      },
+      {
+       "dex": 521,
+       "level": 33,
+       "moves": [
+        "quick-attack",
+        "air-slash",
+        "leer",
+        "razor-wind"
+       ]
+      },
+      {
+       "dex": 581,
+       "level": 35,
+       "moves": [
+        "aqua-ring",
+        "aerial-ace",
+        "air-slash",
+        "bubble-beam"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 7,
+     "name_en": "Brycen",
+     "name_de": "Sandro",
+     "type": "ice",
+     "location_en": "Icirrus City",
+     "location_de": "Nevaio City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 583,
+       "level": 37,
+       "moves": [
+        "mirror-shot",
+        "acid-armor",
+        "frost-breath",
+        "astonish"
+       ]
+      },
+      {
+       "dex": 615,
+       "level": 37,
+       "moves": [
+        "reflect",
+        "aurora-beam",
+        "frost-breath",
+        "rapid-spin"
+       ]
+      },
+      {
+       "dex": 614,
+       "level": 39,
+       "moves": [
+        "slash",
+        "brine",
+        "icicle-crash",
+        "swagger"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 8,
+     "name_en": "Iris",
+     "name_de": "Lilia",
+     "type": "dragon",
+     "location_en": "Opelucid City",
+     "location_de": "Twindrake City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 611,
+       "level": 41,
+       "moves": [
+        "dragon-dance",
+        "dragon-rage",
+        "dragon-tail",
+        "assurance"
+       ]
+      },
+      {
+       "dex": 621,
+       "level": 41,
+       "moves": [
+        "chip-away",
+        "revenge",
+        "dragon-tail",
+        "night-slash"
+       ]
+      },
+      {
+       "dex": 612,
+       "level": 43,
+       "moves": [
+        "dragon-dance",
+        "slash",
+        "dragon-tail",
+        "assurance"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 1,
+     "name_en": "Shauntal",
+     "name_de": "Anissa",
+     "type": "ghost",
+     "location_en": "Unova Pokémon League",
+     "location_de": "Pokémon Liga (Einall)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 563,
+       "level": 48,
+       "moves": [
+        "psychic",
+        "will-o-wisp",
+        "shadow-ball",
+        "grass-knot"
+       ]
+      },
+      {
+       "dex": 593,
+       "level": 48,
+       "moves": [
+        "shadow-ball",
+        "surf",
+        "energy-ball",
+        "brine"
+       ]
+      },
+      {
+       "dex": 623,
+       "level": 48,
+       "moves": [
+        "curse",
+        "brick-break",
+        "earthquake",
+        "shadow-punch"
+       ]
+      },
+      {
+       "dex": 609,
+       "level": 50,
+       "moves": [
+        "fire-blast",
+        "psychic",
+        "shadow-ball",
+        "payback"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 2,
+     "name_en": "Marshal",
+     "name_de": "Eugen",
+     "type": "fighting",
+     "location_en": "Unova Pokémon League",
+     "location_de": "Pokémon Liga (Einall)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 538,
+       "level": 48,
+       "moves": [
+        "stone-edge",
+        "payback",
+        "bulldoze",
+        "storm-throw"
+       ]
+      },
+      {
+       "dex": 539,
+       "level": 48,
+       "moves": [
+        "stone-edge",
+        "karate-chop",
+        "grass-knot",
+        "retaliate"
+       ]
+      },
+      {
+       "dex": 534,
+       "level": 48,
+       "moves": [
+        "stone-edge",
+        "hammer-arm",
+        "retaliate",
+        "grass-knot"
+       ]
+      },
+      {
+       "dex": 620,
+       "level": 50,
+       "moves": [
+        "u-turn",
+        "jump-kick",
+        "rock-slide",
+        "retaliate"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 3,
+     "name_en": "Grimsley",
+     "name_de": "Astor",
+     "type": "dark",
+     "location_en": "Unova Pokémon League",
+     "location_de": "Pokémon Liga (Einall)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 560,
+       "level": 48,
+       "moves": [
+        "sand-attack",
+        "crunch",
+        "poison-jab",
+        "brick-break"
+       ]
+      },
+      {
+       "dex": 553,
+       "level": 48,
+       "moves": [
+        "crunch",
+        "dragon-claw",
+        "earthquake",
+        "foul-play"
+       ]
+      },
+      {
+       "dex": 510,
+       "level": 48,
+       "moves": [
+        "fake-out",
+        "night-slash",
+        "attract",
+        "aerial-ace"
+       ]
+      },
+      {
+       "dex": 625,
+       "level": 50,
+       "moves": [
+        "x-scissor",
+        "night-slash",
+        "metal-claw",
+        "aerial-ace"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 4,
+     "name_en": "Caitlin",
+     "name_de": "Kattlea",
+     "type": "psychic",
+     "location_en": "Unova Pokémon League",
+     "location_de": "Pokémon Liga (Einall)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 579,
+       "level": 48,
+       "moves": [
+        "energy-ball",
+        "thunder",
+        "focus-blast",
+        "psychic"
+       ]
+      },
+      {
+       "dex": 561,
+       "level": 48,
+       "moves": [
+        "air-slash",
+        "shadow-ball",
+        "ice-beam",
+        "psychic"
+       ]
+      },
+      {
+       "dex": 518,
+       "level": 48,
+       "moves": [
+        "shadow-ball",
+        "psychic",
+        "charge-beam",
+        "reflect"
+       ]
+      },
+      {
+       "dex": 576,
+       "level": 50,
+       "moves": [
+        "calm-mind",
+        "thunderbolt",
+        "psychic",
+        "shadow-ball"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "champion",
+     "order": 1,
+     "name_en": "Alder",
+     "name_de": "Lauro",
+     "type": "bug",
+     "location_en": "Unova Pokémon League",
+     "location_de": "Pokémon Liga (Einall)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 617,
+       "level": 75,
+       "moves": [
+        "bug-buzz",
+        "focus-blast",
+        "me-first",
+        "energy-ball"
+       ]
+      },
+      {
+       "dex": 626,
+       "level": 75,
+       "moves": [
+        "head-charge",
+        "megahorn",
+        "earthquake",
+        "stone-edge"
+       ]
+      },
+      {
+       "dex": 621,
+       "level": 75,
+       "moves": [
+        "night-slash",
+        "outrage",
+        "superpower",
+        "payback"
+       ]
+      },
+      {
+       "dex": 584,
+       "level": 75,
+       "moves": [
+        "blizzard",
+        "light-screen",
+        "flash-cannon",
+        "acid-armor"
+       ]
+      },
+      {
+       "dex": 589,
+       "level": 75,
+       "moves": [
+        "x-scissor",
+        "giga-impact",
+        "iron-head",
+        "aerial-ace"
+       ]
+      },
+      {
+       "dex": 637,
+       "level": 77,
+       "moves": [
+        "overheat",
+        "bug-buzz",
+        "hyper-beam",
+        "quiver-dance"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "black-2-white-2",
+   "gen": 5,
+   "name": "Pokémon Schwarz 2 / Weiß 2 (Black 2/White 2)",
+   "bosses": [
+    {
+     "kind": "gym",
+     "order": 1,
+     "name_en": "Cheren",
+     "name_de": "Cheren",
+     "type": "normal",
+     "location_en": "Aspertia City",
+     "location_de": "Eventura City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 504,
+       "level": 11,
+       "moves": [
+        "work-up",
+        "tackle",
+        "bite"
+       ]
+      },
+      {
+       "dex": 506,
+       "level": 13,
+       "moves": [
+        "work-up",
+        "tackle",
+        "bite"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 2,
+     "name_en": "Roxie",
+     "name_de": "Mica",
+     "type": "poison",
+     "location_en": "Virbank City",
+     "location_de": "Vapydro City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 109,
+       "level": 16,
+       "moves": [
+        "tackle",
+        "smog",
+        "assurance",
+        "clear-smog"
+       ]
+      },
+      {
+       "dex": 544,
+       "level": 18,
+       "moves": [
+        "protect",
+        "venoshock",
+        "poison-sting",
+        "pursuit"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 3,
+     "name_en": "Burgh",
+     "name_de": "Artie",
+     "type": "bug",
+     "location_en": "Castelia City",
+     "location_de": "Stratos City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 541,
+       "level": 22,
+       "moves": [
+        "struggle-bug",
+        "razor-leaf",
+        "string-shot"
+       ]
+      },
+      {
+       "dex": 557,
+       "level": 22,
+       "moves": [
+        "struggle-bug",
+        "smack-down",
+        "feint-attack",
+        "rock-polish"
+       ]
+      },
+      {
+       "dex": 542,
+       "level": 24,
+       "moves": [
+        "struggle-bug",
+        "razor-leaf",
+        "cut",
+        "string-shot"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 4,
+     "name_en": "Elesa",
+     "name_de": "Kamilla",
+     "type": "electric",
+     "location_en": "Nimbasa City",
+     "location_de": "Rayono City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 587,
+       "level": 28,
+       "moves": [
+        "volt-switch",
+        "quick-attack",
+        "pursuit",
+        "electro-ball"
+       ]
+      },
+      {
+       "dex": 180,
+       "level": 28,
+       "moves": [
+        "volt-switch",
+        "take-down",
+        "thunder-wave",
+        "electro-ball"
+       ]
+      },
+      {
+       "dex": 523,
+       "level": 30,
+       "moves": [
+        "volt-switch",
+        "flame-charge",
+        "pursuit",
+        "quick-attack"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 5,
+     "name_en": "Clay",
+     "name_de": "Turner",
+     "type": "ground",
+     "location_en": "Driftveil City",
+     "location_de": "Marea City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 552,
+       "level": 31,
+       "moves": [
+        "bulldoze",
+        "crunch",
+        "sand-tomb",
+        "torment"
+       ]
+      },
+      {
+       "dex": 28,
+       "level": 31,
+       "moves": [
+        "bulldoze",
+        "crush-claw",
+        "rollout",
+        "fury-cutter"
+       ]
+      },
+      {
+       "dex": 530,
+       "level": 33,
+       "moves": [
+        "bulldoze",
+        "metal-claw",
+        "slash",
+        "rock-slide"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 6,
+     "name_en": "Skyla",
+     "name_de": "Géraldine",
+     "type": "flying",
+     "location_en": "Mistralton City",
+     "location_de": "Panaero City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 528,
+       "level": 37,
+       "moves": [
+        "acrobatics",
+        "assurance",
+        "heart-stamp",
+        "attract"
+       ]
+      },
+      {
+       "dex": 227,
+       "level": 37,
+       "moves": [
+        "air-cutter",
+        "steel-wing",
+        "fury-attack",
+        "agility"
+       ]
+      },
+      {
+       "dex": 581,
+       "level": 39,
+       "moves": [
+        "air-slash",
+        "roost",
+        "bubble-beam",
+        "feather-dance"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 7,
+     "name_en": "Drayden",
+     "name_de": "Lysander",
+     "type": "dragon",
+     "location_en": "Opelucid City",
+     "location_de": "Twindrake City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 621,
+       "level": 46,
+       "moves": [
+        "dragon-tail",
+        "revenge",
+        "slash",
+        "crunch"
+       ]
+      },
+      {
+       "dex": 330,
+       "level": 46,
+       "moves": [
+        "dragon-tail",
+        "earth-power",
+        "rock-slide",
+        "crunch"
+       ]
+      },
+      {
+       "dex": 612,
+       "level": 48,
+       "moves": [
+        "dragon-tail",
+        "assurance",
+        "slash",
+        "dragon-dance"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 8,
+     "name_en": "Marlon",
+     "name_de": "Benson",
+     "type": "water",
+     "location_en": "Humilau City",
+     "location_de": "Abidaya City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 565,
+       "level": 49,
+       "moves": [
+        "scald",
+        "smack-down",
+        "crunch",
+        "shell-smash"
+       ]
+      },
+      {
+       "dex": 321,
+       "level": 49,
+       "moves": [
+        "scald",
+        "rollout",
+        "bounce",
+        "amnesia"
+       ]
+      },
+      {
+       "dex": 593,
+       "level": 51,
+       "moves": [
+        "scald",
+        "ominous-wind",
+        "brine",
+        "recover"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 1,
+     "name_en": "Shauntal",
+     "name_de": "Anissa",
+     "type": "ghost",
+     "location_en": "Unova Pokémon League",
+     "location_de": "Pokémon Liga (Einall)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 563,
+       "level": 56,
+       "moves": [
+        "will-o-wisp",
+        "grass-knot",
+        "psychic",
+        "shadow-ball"
+       ]
+      },
+      {
+       "dex": 426,
+       "level": 56,
+       "moves": [
+        "thunderbolt",
+        "acrobatics",
+        "psychic",
+        "shadow-ball"
+       ]
+      },
+      {
+       "dex": 623,
+       "level": 56,
+       "moves": [
+        "heavy-slam",
+        "earthquake",
+        "brick-break",
+        "shadow-punch"
+       ]
+      },
+      {
+       "dex": 609,
+       "level": 58,
+       "moves": [
+        "energy-ball",
+        "fire-blast",
+        "psychic",
+        "shadow-ball"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 2,
+     "name_en": "Marshal",
+     "name_de": "Eugen",
+     "type": "fighting",
+     "location_en": "Unova Pokémon League",
+     "location_de": "Pokémon Liga (Einall)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 538,
+       "level": 56,
+       "moves": [
+        "storm-throw",
+        "bulldoze",
+        "rock-tomb",
+        "payback"
+       ]
+      },
+      {
+       "dex": 539,
+       "level": 56,
+       "moves": [
+        "brick-break",
+        "retaliate",
+        "rock-slide",
+        "payback"
+       ]
+      },
+      {
+       "dex": 620,
+       "level": 56,
+       "moves": [
+        "high-jump-kick",
+        "retaliate",
+        "bounce",
+        "u-turn"
+       ]
+      },
+      {
+       "dex": 534,
+       "level": 58,
+       "moves": [
+        "hammer-arm",
+        "retaliate",
+        "bulk-up",
+        "stone-edge"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 3,
+     "name_en": "Grimsley",
+     "name_de": "Astor",
+     "type": "dark",
+     "location_en": "Unova Pokémon League",
+     "location_de": "Pokémon Liga (Einall)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 510,
+       "level": 56,
+       "moves": [
+        "night-slash",
+        "fake-out",
+        "aerial-ace",
+        "attract"
+       ]
+      },
+      {
+       "dex": 560,
+       "level": 56,
+       "moves": [
+        "brick-break",
+        "crunch",
+        "poison-jab",
+        "rock-tomb"
+       ]
+      },
+      {
+       "dex": 553,
+       "level": 56,
+       "moves": [
+        "dragon-claw",
+        "crunch",
+        "earthquake",
+        "rock-tomb"
+       ]
+      },
+      {
+       "dex": 625,
+       "level": 58,
+       "moves": [
+        "night-slash",
+        "x-scissor",
+        "aerial-ace",
+        "metal-claw"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 4,
+     "name_en": "Caitlin",
+     "name_de": "Kattlea",
+     "type": "psychic",
+     "location_en": "Unova Pokémon League",
+     "location_de": "Pokémon Liga (Einall)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 518,
+       "level": 56,
+       "moves": [
+        "yawn",
+        "dream-eater",
+        "charge-beam",
+        "reflect"
+       ]
+      },
+      {
+       "dex": 561,
+       "level": 56,
+       "moves": [
+        "air-slash",
+        "shadow-ball",
+        "ice-beam",
+        "psychic"
+       ]
+      },
+      {
+       "dex": 579,
+       "level": 56,
+       "moves": [
+        "energy-ball",
+        "recover",
+        "focus-blast",
+        "psychic"
+       ]
+      },
+      {
+       "dex": 576,
+       "level": 58,
+       "moves": [
+        "calm-mind",
+        "thunderbolt",
+        "psychic",
+        "shadow-ball"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "champion",
+     "order": 1,
+     "name_en": "Iris",
+     "name_de": "Lilia",
+     "type": "dragon",
+     "location_en": "Unova Pokémon League",
+     "location_de": "Pokémon Liga (Einall)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 635,
+       "level": 57,
+       "moves": [
+        "flamethrower",
+        "charge-beam",
+        "dragon-pulse",
+        "surf"
+       ]
+      },
+      {
+       "dex": 621,
+       "level": 57,
+       "moves": [
+        "flamethrower",
+        "rock-slide",
+        "dragon-tail",
+        "focus-blast"
+       ]
+      },
+      {
+       "dex": 567,
+       "level": 57,
+       "moves": [
+        "acrobatics",
+        "rock-slide",
+        "dragon-claw",
+        "endeavor"
+       ]
+      },
+      {
+       "dex": 306,
+       "level": 57,
+       "moves": [
+        "earthquake",
+        "rock-slide",
+        "double-edge",
+        "autotomize"
+       ]
+      },
+      {
+       "dex": 131,
+       "level": 57,
+       "moves": [
+        "ice-beam",
+        "thunderbolt",
+        "sing",
+        "surf"
+       ]
+      },
+      {
+       "dex": 612,
+       "level": 59,
+       "moves": [
+        "earthquake",
+        "x-scissor",
+        "dual-chop",
+        "dragon-dance"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "x-y",
+   "gen": 6,
+   "name": "Pokémon X / Y",
+   "bosses": [
+    {
+     "kind": "gym",
+     "order": 1,
+     "name_en": "Viola",
+     "name_de": "Viola",
+     "type": "bug",
+     "location_en": "Santalune City",
+     "location_de": "Nouvaria City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 283,
+       "level": 10,
+       "moves": [
+        "quick-attack",
+        "bubble",
+        "water-sport"
+       ]
+      },
+      {
+       "dex": 666,
+       "level": 12,
+       "moves": [
+        "harden",
+        "infestation",
+        "tackle"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 2,
+     "name_en": "Grant",
+     "name_de": "Lino",
+     "type": "rock",
+     "location_en": "Cyllage City",
+     "location_de": "Relievera City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 698,
+       "level": 25,
+       "moves": [
+        "aurora-beam",
+        "rock-tomb",
+        "thunder-wave",
+        "take-down"
+       ]
+      },
+      {
+       "dex": 696,
+       "level": 25,
+       "moves": [
+        "rock-tomb",
+        "bite",
+        "stomp"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 3,
+     "name_en": "Korrina",
+     "name_de": "Connie",
+     "type": "fighting",
+     "location_en": "Shalour City",
+     "location_de": "Yantara City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 619,
+       "level": 29,
+       "moves": [
+        "power-up-punch",
+        "fake-out",
+        "double-slap"
+       ]
+      },
+      {
+       "dex": 67,
+       "level": 28,
+       "moves": [
+        "power-up-punch",
+        "rock-tomb",
+        "leer"
+       ]
+      },
+      {
+       "dex": 701,
+       "level": 32,
+       "moves": [
+        "flying-press",
+        "hone-claws",
+        "power-up-punch"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 4,
+     "name_en": "Ramos",
+     "name_de": "Amaro",
+     "type": "grass",
+     "location_en": "Coumarine City",
+     "location_de": "Tempera City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 189,
+       "level": 30,
+       "moves": [
+        "grass-knot",
+        "acrobatics",
+        "leech-seed"
+       ]
+      },
+      {
+       "dex": 70,
+       "level": 31,
+       "moves": [
+        "grass-knot",
+        "acid",
+        "poison-powder",
+        "gastro-acid"
+       ]
+      },
+      {
+       "dex": 673,
+       "level": 34,
+       "moves": [
+        "grass-knot",
+        "bulldoze",
+        "take-down"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 5,
+     "name_en": "Clemont",
+     "name_de": "Citro",
+     "type": "electric",
+     "location_en": "Lumiose City",
+     "location_de": "Illumina City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 587,
+       "level": 35,
+       "moves": [
+        "volt-switch",
+        "quick-attack",
+        "aerial-ace"
+       ]
+      },
+      {
+       "dex": 82,
+       "level": 35,
+       "moves": [
+        "thunderbolt",
+        "electric-terrain",
+        "mirror-shot"
+       ]
+      },
+      {
+       "dex": 695,
+       "level": 37,
+       "moves": [
+        "thunderbolt",
+        "quick-attack",
+        "grass-knot"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 6,
+     "name_en": "Valerie",
+     "name_de": "Valerie",
+     "type": "fairy",
+     "location_en": "Laverre City",
+     "location_de": "Romantia City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 303,
+       "level": 38,
+       "moves": [
+        "feint-attack",
+        "crunch",
+        "iron-defense"
+       ]
+      },
+      {
+       "dex": 122,
+       "level": 39,
+       "moves": [
+        "light-screen",
+        "reflect",
+        "psychic",
+        "dazzling-gleam"
+       ]
+      },
+      {
+       "dex": 700,
+       "level": 42,
+       "moves": [
+        "dazzling-gleam",
+        "quick-attack",
+        "swift",
+        "charm"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 7,
+     "name_en": "Olympia",
+     "name_de": "Astrid",
+     "type": "psychic",
+     "location_en": "Anistar City",
+     "location_de": "Fluxia City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 561,
+       "level": 44,
+       "moves": [
+        "psychic",
+        "air-slash",
+        "light-screen",
+        "reflect"
+       ]
+      },
+      {
+       "dex": 199,
+       "level": 45,
+       "moves": [
+        "psychic",
+        "calm-mind",
+        "power-gem",
+        "yawn"
+       ]
+      },
+      {
+       "dex": 678,
+       "level": 48,
+       "moves": [
+        "psychic",
+        "calm-mind",
+        "fake-out",
+        "shadow-ball"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 8,
+     "name_en": "Wulfric",
+     "name_de": "Galantho",
+     "type": "ice",
+     "location_en": "Snowbelle City",
+     "location_de": "Fractalia City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 460,
+       "level": 56,
+       "moves": [
+        "ice-beam",
+        "ice-shard",
+        "energy-ball"
+       ]
+      },
+      {
+       "dex": 615,
+       "level": 55,
+       "moves": [
+        "ice-beam",
+        "confuse-ray",
+        "flash-cannon",
+        "hail"
+       ]
+      },
+      {
+       "dex": 713,
+       "level": 59,
+       "moves": [
+        "avalanche",
+        "crunch",
+        "curse",
+        "gyro-ball"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 1,
+     "name_en": "Malva",
+     "name_de": "Pachira",
+     "type": "fire",
+     "location_en": "Kalos Pokémon League",
+     "location_de": "Pokémon Liga (Kalos)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 668,
+       "level": 63,
+       "moves": [
+        "hyper-voice",
+        "flamethrower",
+        "wild-charge",
+        "noble-roar"
+       ]
+      },
+      {
+       "dex": 324,
+       "level": 63,
+       "moves": [
+        "curse",
+        "earthquake",
+        "stone-edge",
+        "flame-wheel"
+       ]
+      },
+      {
+       "dex": 609,
+       "level": 63,
+       "moves": [
+        "flamethrower",
+        "shadow-ball",
+        "confuse-ray",
+        "confide"
+       ]
+      },
+      {
+       "dex": 663,
+       "level": 65,
+       "moves": [
+        "brave-bird",
+        "quick-attack",
+        "flare-blitz",
+        "flail"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 2,
+     "name_en": "Siebold",
+     "name_de": "Narcisse",
+     "type": "water",
+     "location_en": "Kalos Pokémon League",
+     "location_de": "Pokémon Liga (Kalos)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 693,
+       "level": 63,
+       "moves": [
+        "water-pulse",
+        "dark-pulse",
+        "dragon-pulse",
+        "aura-sphere"
+       ]
+      },
+      {
+       "dex": 130,
+       "level": 63,
+       "moves": [
+        "waterfall",
+        "ice-fang",
+        "earthquake",
+        "dragon-dance"
+       ]
+      },
+      {
+       "dex": 121,
+       "level": 63,
+       "moves": [
+        "dazzling-gleam",
+        "psychic",
+        "surf",
+        "light-screen"
+       ]
+      },
+      {
+       "dex": 689,
+       "level": 65,
+       "moves": [
+        "cross-chop",
+        "stone-edge",
+        "razor-shell",
+        "x-scissor"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 3,
+     "name_en": "Wikstrom",
+     "name_de": "Thymelot",
+     "type": "steel",
+     "location_en": "Kalos Pokémon League",
+     "location_de": "Pokémon Liga (Kalos)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 707,
+       "level": 63,
+       "moves": [
+        "dazzling-gleam",
+        "flash-cannon",
+        "torment",
+        "spikes"
+       ]
+      },
+      {
+       "dex": 476,
+       "level": 63,
+       "moves": [
+        "earth-power",
+        "power-gem",
+        "discharge",
+        "flash-cannon"
+       ]
+      },
+      {
+       "dex": 212,
+       "level": 63,
+       "moves": [
+        "bullet-punch",
+        "x-scissor",
+        "iron-head",
+        "night-slash"
+       ]
+      },
+      {
+       "dex": 681,
+       "level": 65,
+       "moves": [
+        "kings-shield",
+        "sacred-sword",
+        "shadow-claw",
+        "iron-head"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 4,
+     "name_en": "Drasna",
+     "name_de": "Dracena",
+     "type": "dragon",
+     "location_en": "Kalos Pokémon League",
+     "location_de": "Pokémon Liga (Kalos)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 691,
+       "level": 63,
+       "moves": [
+        "dragon-pulse",
+        "surf",
+        "sludge-bomb",
+        "thunderbolt"
+       ]
+      },
+      {
+       "dex": 334,
+       "level": 63,
+       "moves": [
+        "moonblast",
+        "dragon-pulse",
+        "cotton-guard",
+        "sing"
+       ]
+      },
+      {
+       "dex": 621,
+       "level": 63,
+       "moves": [
+        "dragon-tail",
+        "revenge",
+        "retaliate",
+        "chip-away"
+       ]
+      },
+      {
+       "dex": 715,
+       "level": 65,
+       "moves": [
+        "air-slash",
+        "dragon-pulse",
+        "flamethrower",
+        "super-fang"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "champion",
+     "order": 1,
+     "name_en": "Diantha",
+     "name_de": "Diantha",
+     "type": "fairy",
+     "location_en": "Kalos Pokémon League",
+     "location_de": "Pokémon Liga (Kalos)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 701,
+       "level": 64,
+       "moves": [
+        "swords-dance",
+        "flying-press",
+        "x-scissor",
+        "poison-jab"
+       ]
+      },
+      {
+       "dex": 697,
+       "level": 65,
+       "moves": [
+        "head-smash",
+        "earthquake",
+        "dragon-claw",
+        "crunch"
+       ]
+      },
+      {
+       "dex": 699,
+       "level": 65,
+       "moves": [
+        "thunder",
+        "blizzard",
+        "light-screen",
+        "reflect"
+       ]
+      },
+      {
+       "dex": 711,
+       "level": 65,
+       "moves": [
+        "trick-or-treat",
+        "phantom-force",
+        "seed-bomb",
+        "shadow-sneak"
+       ]
+      },
+      {
+       "dex": 706,
+       "level": 66,
+       "moves": [
+        "dragon-pulse",
+        "muddy-water",
+        "fire-blast",
+        "focus-blast"
+       ]
+      },
+      {
+       "dex": 282,
+       "level": 68,
+       "moves": [
+        "moonblast",
+        "psychic",
+        "shadow-ball",
+        "thunderbolt"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "omega-ruby-alpha-sapphire",
+   "gen": 6,
+   "name": "Pokémon Omega Rubin / Alpha Saphir (Omega Ruby/Alpha Sapphire)",
+   "bosses": [
+    {
+     "kind": "gym",
+     "order": 1,
+     "name_en": "Roxanne",
+     "name_de": "Felizia",
+     "type": "rock",
+     "location_en": "Rustboro City",
+     "location_de": "Metarost City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 74,
+       "level": 12,
+       "moves": [
+        "tackle",
+        "defense-curl",
+        "rock-tomb"
+       ]
+      },
+      {
+       "dex": 299,
+       "level": 14,
+       "moves": [
+        "tackle",
+        "harden",
+        "rock-tomb"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 2,
+     "name_en": "Brawly",
+     "name_de": "Kamillo",
+     "type": "fighting",
+     "location_en": "Dewford Town",
+     "location_de": "Faustauhaven",
+     "variant": null,
+     "team": [
+      {
+       "dex": 66,
+       "level": 14,
+       "moves": [
+        "leer",
+        "karate-chop",
+        "seismic-toss",
+        "bulk-up"
+       ]
+      },
+      {
+       "dex": 296,
+       "level": 16,
+       "moves": [
+        "arm-thrust",
+        "knock-off",
+        "sand-attack",
+        "bulk-up"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 3,
+     "name_en": "Wattson",
+     "name_de": "Walter",
+     "type": "electric",
+     "location_en": "Mauville City",
+     "location_de": "Malvenfroh City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 81,
+       "level": 19,
+       "moves": [
+        "thunder-wave",
+        "tackle",
+        "volt-switch"
+       ]
+      },
+      {
+       "dex": 100,
+       "level": 19,
+       "moves": [
+        "rollout",
+        "charge",
+        "volt-switch"
+       ]
+      },
+      {
+       "dex": 82,
+       "level": 21,
+       "moves": [
+        "supersonic",
+        "magnet-bomb",
+        "volt-switch"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 4,
+     "name_en": "Flannery",
+     "name_de": "Flavia",
+     "type": "fire",
+     "location_en": "Lavaridge Town",
+     "location_de": "Bad Lavastadt",
+     "variant": null,
+     "team": [
+      {
+       "dex": 218,
+       "level": 26,
+       "moves": [
+        "overheat",
+        "rock-throw",
+        "light-screen",
+        "sunny-day"
+       ]
+      },
+      {
+       "dex": 322,
+       "level": 26,
+       "moves": [
+        "earth-power",
+        "lava-plume",
+        "amnesia",
+        "sunny-day"
+       ]
+      },
+      {
+       "dex": 324,
+       "level": 28,
+       "moves": [
+        "overheat",
+        "body-slam",
+        "curse",
+        "sunny-day"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 5,
+     "name_en": "Norman",
+     "name_de": "Norman",
+     "type": "normal",
+     "location_en": "Petalburg City",
+     "location_de": "Blütenburg City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 289,
+       "level": 28,
+       "moves": [
+        "encore",
+        "retaliate",
+        "yawn",
+        "feint-attack"
+       ]
+      },
+      {
+       "dex": 288,
+       "level": 28,
+       "moves": [
+        "fury-swipes",
+        "feint-attack",
+        "retaliate",
+        "encore"
+       ]
+      },
+      {
+       "dex": 289,
+       "level": 30,
+       "moves": [
+        "chip-away",
+        "swagger",
+        "retaliate",
+        "feint-attack"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 6,
+     "name_en": "Winona",
+     "name_de": "Wibke",
+     "type": "flying",
+     "location_en": "Fortree City",
+     "location_de": "Baumhausen City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 277,
+       "level": 33,
+       "moves": [
+        "quick-attack",
+        "aerial-ace",
+        "double-team",
+        "endeavor"
+       ]
+      },
+      {
+       "dex": 279,
+       "level": 33,
+       "moves": [
+        "water-pulse",
+        "roost",
+        "protect",
+        "aerial-ace"
+       ]
+      },
+      {
+       "dex": 227,
+       "level": 33,
+       "moves": [
+        "sand-attack",
+        "air-cutter",
+        "steel-wing",
+        "aerial-ace"
+       ]
+      },
+      {
+       "dex": 334,
+       "level": 35,
+       "moves": [
+        "earthquake",
+        "dragon-breath",
+        "cotton-guard",
+        "roost"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 7,
+     "name_en": "Tate & Liza",
+     "name_de": "Ben und Svenja",
+     "type": "psychic",
+     "location_en": "Mossdeep City",
+     "location_de": "Moosbach City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 338,
+       "level": 45,
+       "moves": [
+        "sunny-day",
+        "rock-slide",
+        "psychic",
+        "solar-beam"
+       ]
+      },
+      {
+       "dex": 337,
+       "level": 45,
+       "moves": [
+        "light-screen",
+        "psychic",
+        "hypnosis",
+        "calm-mind"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 8,
+     "name_en": "Wallace",
+     "name_de": "Wassili",
+     "type": "water",
+     "location_en": "Sootopolis City",
+     "location_de": "Xeneroville",
+     "variant": null,
+     "team": [
+      {
+       "dex": 370,
+       "level": 44,
+       "moves": [
+        "water-pulse",
+        "attract",
+        "sweet-kiss",
+        "draining-kiss"
+       ]
+      },
+      {
+       "dex": 340,
+       "level": 44,
+       "moves": [
+        "mud-sport",
+        "waterfall",
+        "zen-headbutt",
+        "earthquake"
+       ]
+      },
+      {
+       "dex": 364,
+       "level": 44,
+       "moves": [
+        "encore",
+        "body-slam",
+        "aurora-beam",
+        "waterfall"
+       ]
+      },
+      {
+       "dex": 119,
+       "level": 44,
+       "moves": [
+        "aqua-ring",
+        "rain-dance",
+        "waterfall",
+        "horn-drill"
+       ]
+      },
+      {
+       "dex": 350,
+       "level": 46,
+       "moves": [
+        "hydro-pump",
+        "disarming-voice",
+        "recover",
+        "ice-beam"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 1,
+     "name_en": "Sidney",
+     "name_de": "Ulrich",
+     "type": "dark",
+     "location_en": "Hoenn Pokémon League (Ever Grande City)",
+     "location_de": "Pokémon Liga (Hoenn), Prachtpolis City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 262,
+       "level": 50,
+       "moves": [
+        "swagger",
+        "take-down",
+        "sucker-punch",
+        "crunch"
+       ]
+      },
+      {
+       "dex": 275,
+       "level": 50,
+       "moves": [
+        "fake-out",
+        "feint-attack",
+        "extrasensory",
+        "leaf-blade"
+       ]
+      },
+      {
+       "dex": 332,
+       "level": 50,
+       "moves": [
+        "leech-seed",
+        "payback",
+        "needle-arm",
+        "spiky-shield"
+       ]
+      },
+      {
+       "dex": 319,
+       "level": 50,
+       "moves": [
+        "crunch",
+        "poison-fang",
+        "aqua-jet",
+        "slash"
+       ]
+      },
+      {
+       "dex": 359,
+       "level": 52,
+       "moves": [
+        "aerial-ace",
+        "night-slash",
+        "psycho-cut",
+        "slash"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 2,
+     "name_en": "Phoebe",
+     "name_de": "Antonia",
+     "type": "ghost",
+     "location_en": "Hoenn Pokémon League (Ever Grande City)",
+     "location_de": "Pokémon Liga (Hoenn), Prachtpolis City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 356,
+       "level": 51,
+       "moves": [
+        "shadow-punch",
+        "confuse-ray",
+        "curse",
+        "future-sight"
+       ]
+      },
+      {
+       "dex": 354,
+       "level": 51,
+       "moves": [
+        "shadow-ball",
+        "spite",
+        "will-o-wisp",
+        "feint-attack"
+       ]
+      },
+      {
+       "dex": 302,
+       "level": 51,
+       "moves": [
+        "shadow-claw",
+        "foul-play",
+        "power-gem",
+        "fake-out"
+       ]
+      },
+      {
+       "dex": 354,
+       "level": 51,
+       "moves": [
+        "shadow-ball",
+        "grudge",
+        "toxic",
+        "psychic"
+       ]
+      },
+      {
+       "dex": 477,
+       "level": 53,
+       "moves": [
+        "hex",
+        "fire-punch",
+        "ice-punch",
+        "thunder-punch"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 3,
+     "name_en": "Glacia",
+     "name_de": "Frosina",
+     "type": "ice",
+     "location_en": "Hoenn Pokémon League (Ever Grande City)",
+     "location_de": "Pokémon Liga (Hoenn), Prachtpolis City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 362,
+       "level": 52,
+       "moves": [
+        "light-screen",
+        "ice-shard",
+        "hail",
+        "crunch"
+       ]
+      },
+      {
+       "dex": 478,
+       "level": 52,
+       "moves": [
+        "confuse-ray",
+        "blizzard",
+        "hail",
+        "ominous-wind"
+       ]
+      },
+      {
+       "dex": 362,
+       "level": 52,
+       "moves": [
+        "protect",
+        "ice-shard",
+        "hail",
+        "freeze-dry"
+       ]
+      },
+      {
+       "dex": 478,
+       "level": 52,
+       "moves": [
+        "draining-kiss",
+        "blizzard",
+        "hail",
+        "shadow-ball"
+       ]
+      },
+      {
+       "dex": 365,
+       "level": 54,
+       "moves": [
+        "surf",
+        "body-slam",
+        "blizzard",
+        "sheer-cold"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 4,
+     "name_en": "Drake",
+     "name_de": "Dragan",
+     "type": "dragon",
+     "location_en": "Hoenn Pokémon League (Ever Grande City)",
+     "location_de": "Pokémon Liga (Hoenn), Prachtpolis City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 334,
+       "level": 53,
+       "moves": [
+        "aerial-ace",
+        "cotton-guard",
+        "dragon-pulse",
+        "moonblast"
+       ]
+      },
+      {
+       "dex": 330,
+       "level": 53,
+       "moves": [
+        "earthquake",
+        "dragon-claw",
+        "rock-slide",
+        "supersonic"
+       ]
+      },
+      {
+       "dex": 230,
+       "level": 53,
+       "moves": [
+        "dragon-pulse",
+        "surf",
+        "yawn",
+        "ice-beam"
+       ]
+      },
+      {
+       "dex": 330,
+       "level": 53,
+       "moves": [
+        "flamethrower",
+        "boomburst",
+        "dragon-pulse",
+        "screech"
+       ]
+      },
+      {
+       "dex": 373,
+       "level": 55,
+       "moves": [
+        "dragon-rush",
+        "zen-headbutt",
+        "crunch",
+        "thunder-fang"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "champion",
+     "order": 1,
+     "name_en": "Steven Stone",
+     "name_de": "Troy Trumm",
+     "type": "steel",
+     "location_en": "Hoenn Pokémon League (Ever Grande City)",
+     "location_de": "Pokémon Liga (Hoenn), Prachtpolis City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 227,
+       "level": 57,
+       "moves": [
+        "toxic",
+        "aerial-ace",
+        "spikes",
+        "steel-wing"
+       ]
+      },
+      {
+       "dex": 344,
+       "level": 57,
+       "moves": [
+        "reflect",
+        "light-screen",
+        "extrasensory",
+        "earth-power"
+       ]
+      },
+      {
+       "dex": 306,
+       "level": 57,
+       "moves": [
+        "stone-edge",
+        "earthquake",
+        "iron-tail",
+        "dragon-claw"
+       ]
+      },
+      {
+       "dex": 346,
+       "level": 57,
+       "moves": [
+        "giga-drain",
+        "ancient-power",
+        "sludge-bomb",
+        "confuse-ray"
+       ]
+      },
+      {
+       "dex": 348,
+       "level": 57,
+       "moves": [
+        "x-scissor",
+        "rock-blast",
+        "metal-claw",
+        "crush-claw"
+       ]
+      },
+      {
+       "dex": 376,
+       "level": 59,
+       "moves": [
+        "bullet-punch",
+        "zen-headbutt",
+        "meteor-mash",
+        "giga-impact"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "sun-moon",
+   "gen": 7,
+   "name": "Pokémon Sonne / Mond (Sun/Moon)",
+   "bosses": [
+    {
+     "kind": "special",
+     "order": 1,
+     "name_en": "Hala",
+     "name_de": "Hala",
+     "type": "fighting",
+     "location_en": "Iki Town (Melemele Island)",
+     "location_de": "Lili’i (Mele-Mele)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 56,
+       "level": 14,
+       "moves": [
+        "karate-chop",
+        "pursuit",
+        "focus-energy"
+       ]
+      },
+      {
+       "dex": 296,
+       "level": 14,
+       "moves": [
+        "arm-thrust",
+        "sand-attack",
+        "fake-out"
+       ]
+      },
+      {
+       "dex": 739,
+       "level": 15,
+       "moves": [
+        "pursuit",
+        "power-up-punch",
+        "leer"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "special",
+     "order": 2,
+     "name_en": "Olivia",
+     "name_de": "Mayla",
+     "type": "rock",
+     "location_en": "Ruins of Life (Akala Island)",
+     "location_de": "Ruinen des Lebens (Akala)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 299,
+       "level": 26,
+       "moves": [
+        "rock-slide",
+        "spark",
+        "thunder-wave"
+       ]
+      },
+      {
+       "dex": 525,
+       "level": 26,
+       "moves": [
+        "rock-blast",
+        "mud-slap",
+        "headbutt"
+       ]
+      },
+      {
+       "dex": 745,
+       "level": 27,
+       "moves": [
+        "bite",
+        "rock-throw"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "special",
+     "order": 3,
+     "name_en": "Nanu",
+     "name_de": "Yasu",
+     "type": "dark",
+     "location_en": "Malie City (Ula’ula Island)",
+     "location_de": "Malihe City (Ula’ula)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 302,
+       "level": 38,
+       "moves": [
+        "power-gem",
+        "shadow-ball",
+        "fake-out"
+       ]
+      },
+      {
+       "dex": 552,
+       "level": 38,
+       "moves": [
+        "crunch",
+        "assurance",
+        "swagger",
+        "earthquake"
+       ]
+      },
+      {
+       "dex": 53,
+       "level": 39,
+       "moves": [
+        "power-gem",
+        "fake-out",
+        "dark-pulse"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "special",
+     "order": 4,
+     "name_en": "Hapu",
+     "name_de": "Hapu’u",
+     "type": "ground",
+     "location_en": "Vast Poni Canyon (Poni Island)",
+     "location_de": "Canyon von Poni (Poni)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 51,
+       "level": 47,
+       "moves": [
+        "iron-head",
+        "earthquake",
+        "sucker-punch",
+        "sandstorm"
+       ]
+      },
+      {
+       "dex": 423,
+       "level": 47,
+       "moves": [
+        "muddy-water",
+        "mud-bomb",
+        "recover"
+       ]
+      },
+      {
+       "dex": 330,
+       "level": 47,
+       "moves": [
+        "earth-power",
+        "dragon-breath"
+       ]
+      },
+      {
+       "dex": 750,
+       "level": 48,
+       "moves": [
+        "heavy-slam",
+        "earthquake",
+        "double-kick",
+        "counter"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 1,
+     "name_en": "Hala",
+     "name_de": "Hala",
+     "type": "fighting",
+     "location_en": "Mount Lanakila Pokémon League (Alola)",
+     "location_de": "Pokémon-Liga (Alola)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 297,
+       "level": 54,
+       "moves": [
+        "fake-out",
+        "close-combat",
+        "knock-off"
+       ]
+      },
+      {
+       "dex": 57,
+       "level": 54,
+       "moves": [
+        "cross-chop",
+        "outrage",
+        "punishment",
+        "pursuit"
+       ]
+      },
+      {
+       "dex": 760,
+       "level": 54,
+       "moves": [
+        "hammer-arm",
+        "brutal-swing"
+       ]
+      },
+      {
+       "dex": 62,
+       "level": 54,
+       "moves": [
+        "waterfall",
+        "submission"
+       ]
+      },
+      {
+       "dex": 740,
+       "level": 55,
+       "moves": [
+        "ice-hammer",
+        "close-combat"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 2,
+     "name_en": "Olivia",
+     "name_de": "Mayla",
+     "type": "rock",
+     "location_en": "Mount Lanakila Pokémon League (Alola)",
+     "location_de": "Pokémon-Liga (Alola)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 369,
+       "level": 54,
+       "moves": [
+        "hydro-pump",
+        "ancient-power",
+        "yawn"
+       ]
+      },
+      {
+       "dex": 703,
+       "level": 54,
+       "moves": [
+        "power-gem",
+        "moonblast",
+        "reflect"
+       ]
+      },
+      {
+       "dex": 76,
+       "level": 54,
+       "moves": [
+        "thunder-punch",
+        "rock-blast",
+        "steamroller"
+       ]
+      },
+      {
+       "dex": 476,
+       "level": 54,
+       "moves": [
+        "earth-power",
+        "power-gem",
+        "thunder-wave",
+        "sandstorm"
+       ]
+      },
+      {
+       "dex": 745,
+       "level": 55,
+       "moves": [
+        "crunch",
+        "stone-edge",
+        "counter",
+        "rock-climb"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 3,
+     "name_en": "Acerola",
+     "name_de": "Lola",
+     "type": "ghost",
+     "location_en": "Mount Lanakila Pokémon League (Alola)",
+     "location_de": "Pokémon-Liga (Alola)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 302,
+       "level": 54,
+       "moves": [
+        "shadow-claw",
+        "zen-headbutt",
+        "confuse-ray",
+        "fake-out"
+       ]
+      },
+      {
+       "dex": 426,
+       "level": 54,
+       "moves": [
+        "ominous-wind",
+        "focus-energy",
+        "amnesia",
+        "baton-pass"
+       ]
+      },
+      {
+       "dex": 781,
+       "level": 54,
+       "moves": [
+        "slam",
+        "shadow-ball",
+        "energy-ball",
+        "whirlpool"
+       ]
+      },
+      {
+       "dex": 478,
+       "level": 54,
+       "moves": [
+        "blizzard",
+        "shadow-ball",
+        "confuse-ray",
+        "ice-shard"
+       ]
+      },
+      {
+       "dex": 770,
+       "level": 55,
+       "moves": [
+        "shadow-ball",
+        "earth-power",
+        "giga-drain",
+        "iron-defense"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 4,
+     "name_en": "Kahili",
+     "name_de": "Kahili",
+     "type": "flying",
+     "location_en": "Mount Lanakila Pokémon League (Alola)",
+     "location_de": "Pokémon-Liga (Alola)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 227,
+       "level": 54,
+       "moves": [
+        "slash",
+        "steel-wing",
+        "feint",
+        "spikes"
+       ]
+      },
+      {
+       "dex": 169,
+       "level": 54,
+       "moves": [
+        "air-slash",
+        "swift",
+        "supersonic",
+        "poison-fang"
+       ]
+      },
+      {
+       "dex": 741,
+       "level": 54,
+       "moves": [
+        "revelation-dance",
+        "teeter-dance",
+        "air-slash",
+        "feather-dance"
+       ]
+      },
+      {
+       "dex": 630,
+       "level": 54,
+       "moves": [
+        "bone-rush",
+        "brave-bird",
+        "punishment",
+        "flatter"
+       ]
+      },
+      {
+       "dex": 733,
+       "level": 55,
+       "moves": [
+        "bullet-seed",
+        "rock-blast",
+        "beak-blast",
+        "screech"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "champion",
+     "order": 1,
+     "name_en": "Professor Kukui",
+     "name_de": "Professor Kukui",
+     "type": "rock",
+     "location_en": "Mount Lanakila Pokémon League (Alola)",
+     "location_de": "Pokémon-Liga (Alola)",
+     "variant": "if starter is Rowlet",
+     "team": [
+      {
+       "dex": 745,
+       "level": 57,
+       "moves": [
+        "stone-edge",
+        "accelerock",
+        "crunch",
+        "stealth-rock"
+       ]
+      },
+      {
+       "dex": 38,
+       "level": 56,
+       "moves": [
+        "dazzling-gleam",
+        "blizzard",
+        "ice-shard",
+        "safeguard"
+       ]
+      },
+      {
+       "dex": 628,
+       "level": 56,
+       "moves": [
+        "crush-claw",
+        "brave-bird",
+        "whirlwind",
+        "tailwind"
+       ]
+      },
+      {
+       "dex": 462,
+       "level": 56,
+       "moves": [
+        "thunderbolt",
+        "flash-cannon",
+        "thunder-wave",
+        "mirror-coat"
+       ]
+      },
+      {
+       "dex": 143,
+       "level": 56,
+       "moves": [
+        "body-slam",
+        "crunch",
+        "heavy-slam",
+        "high-horsepower"
+       ]
+      },
+      {
+       "dex": 727,
+       "level": 58,
+       "moves": [
+        "flare-blitz",
+        "darkest-lariat",
+        "outrage",
+        "cross-chop"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "champion",
+     "order": 1,
+     "name_en": "Professor Kukui",
+     "name_de": "Professor Kukui",
+     "type": "rock",
+     "location_en": "Mount Lanakila Pokémon League (Alola)",
+     "location_de": "Pokémon-Liga (Alola)",
+     "variant": "if starter is Litten",
+     "team": [
+      {
+       "dex": 745,
+       "level": 57,
+       "moves": [
+        "stone-edge",
+        "accelerock",
+        "crunch",
+        "stealth-rock"
+       ]
+      },
+      {
+       "dex": 38,
+       "level": 56,
+       "moves": [
+        "dazzling-gleam",
+        "blizzard",
+        "ice-shard",
+        "safeguard"
+       ]
+      },
+      {
+       "dex": 628,
+       "level": 56,
+       "moves": [
+        "crush-claw",
+        "brave-bird",
+        "whirlwind",
+        "tailwind"
+       ]
+      },
+      {
+       "dex": 462,
+       "level": 56,
+       "moves": [
+        "thunderbolt",
+        "flash-cannon",
+        "thunder-wave",
+        "mirror-coat"
+       ]
+      },
+      {
+       "dex": 143,
+       "level": 56,
+       "moves": [
+        "body-slam",
+        "crunch",
+        "heavy-slam",
+        "high-horsepower"
+       ]
+      },
+      {
+       "dex": 730,
+       "level": 58,
+       "moves": [
+        "sparkling-aria",
+        "moonblast",
+        "aqua-jet",
+        "hyper-voice"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "champion",
+     "order": 1,
+     "name_en": "Professor Kukui",
+     "name_de": "Professor Kukui",
+     "type": "rock",
+     "location_en": "Mount Lanakila Pokémon League (Alola)",
+     "location_de": "Pokémon-Liga (Alola)",
+     "variant": "if starter is Popplio",
+     "team": [
+      {
+       "dex": 745,
+       "level": 57,
+       "moves": [
+        "stone-edge",
+        "accelerock",
+        "crunch",
+        "stealth-rock"
+       ]
+      },
+      {
+       "dex": 38,
+       "level": 56,
+       "moves": [
+        "dazzling-gleam",
+        "blizzard",
+        "ice-shard",
+        "safeguard"
+       ]
+      },
+      {
+       "dex": 628,
+       "level": 56,
+       "moves": [
+        "crush-claw",
+        "brave-bird",
+        "whirlwind",
+        "tailwind"
+       ]
+      },
+      {
+       "dex": 462,
+       "level": 56,
+       "moves": [
+        "thunderbolt",
+        "flash-cannon",
+        "thunder-wave",
+        "mirror-coat"
+       ]
+      },
+      {
+       "dex": 143,
+       "level": 56,
+       "moves": [
+        "body-slam",
+        "crunch",
+        "heavy-slam",
+        "high-horsepower"
+       ]
+      },
+      {
+       "dex": 724,
+       "level": 58,
+       "moves": [
+        "leaf-blade",
+        "spirit-shackle",
+        "brave-bird",
+        "sucker-punch"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ultra-sun-ultra-moon",
+   "gen": 7,
+   "name": "Pokémon Ultrasonne / Ultramond (Ultra Sun/Ultra Moon)",
+   "bosses": [
+    {
+     "kind": "special",
+     "order": 1,
+     "name_en": "Hala",
+     "name_de": "Hala",
+     "type": "fighting",
+     "location_en": "Iki Town (Melemele Island)",
+     "location_de": "Lili’i (Mele-Mele)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 66,
+       "level": 15,
+       "moves": [
+        "karate-chop",
+        "revenge",
+        "focus-energy"
+       ]
+      },
+      {
+       "dex": 296,
+       "level": 15,
+       "moves": [
+        "arm-thrust",
+        "sand-attack",
+        "fake-out"
+       ]
+      },
+      {
+       "dex": 739,
+       "level": 16,
+       "moves": [
+        "pursuit",
+        "power-up-punch",
+        "leer"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "special",
+     "order": 2,
+     "name_en": "Olivia",
+     "name_de": "Mayla",
+     "type": "rock",
+     "location_en": "Ruins of Life (Akala Island)",
+     "location_de": "Ruinen des Lebens (Akala)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 347,
+       "level": 27,
+       "moves": [
+        "bug-bite",
+        "smack-down",
+        "metal-claw"
+       ]
+      },
+      {
+       "dex": 345,
+       "level": 27,
+       "moves": [
+        "giga-drain",
+        "ancient-power",
+        "brine"
+       ]
+      },
+      {
+       "dex": 745,
+       "level": 28,
+       "moves": [
+        "bite",
+        "rock-tomb"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "special",
+     "order": 3,
+     "name_en": "Nanu",
+     "name_de": "Yasu",
+     "type": "dark",
+     "location_en": "Malie City (Ula’ula Island)",
+     "location_de": "Malihe City (Ula’ula)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 302,
+       "level": 43,
+       "moves": [
+        "power-gem",
+        "shadow-ball",
+        "fake-out"
+       ]
+      },
+      {
+       "dex": 552,
+       "level": 43,
+       "moves": [
+        "crunch",
+        "assurance",
+        "swagger",
+        "earthquake"
+       ]
+      },
+      {
+       "dex": 53,
+       "level": 44,
+       "moves": [
+        "power-gem",
+        "fake-out",
+        "dark-pulse"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "special",
+     "order": 4,
+     "name_en": "Hapu",
+     "name_de": "Hapu’u",
+     "type": "ground",
+     "location_en": "Exeggutor Island (Poni Island)",
+     "location_de": "Kokowei-Eiland (Poni)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 623,
+       "level": 53,
+       "moves": [
+        "hammer-arm",
+        "earthquake",
+        "shadow-punch",
+        "stealth-rock"
+       ]
+      },
+      {
+       "dex": 423,
+       "level": 53,
+       "moves": [
+        "muddy-water",
+        "mud-bomb",
+        "recover"
+       ]
+      },
+      {
+       "dex": 330,
+       "level": 53,
+       "moves": [
+        "earth-power",
+        "dragon-breath"
+       ]
+      },
+      {
+       "dex": 750,
+       "level": 54,
+       "moves": [
+        "heavy-slam",
+        "earthquake",
+        "double-kick",
+        "payback"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 1,
+     "name_en": "Molayne",
+     "name_de": "Marlon",
+     "type": "steel",
+     "location_en": "Mount Lanakila Pokémon League (Alola)",
+     "location_de": "Pokémon-Liga (Alola)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 707,
+       "level": 56,
+       "moves": [
+        "spikes",
+        "thunder-wave",
+        "flash-cannon",
+        "reflect"
+       ]
+      },
+      {
+       "dex": 625,
+       "level": 56,
+       "moves": [
+        "night-slash",
+        "iron-head",
+        "x-scissor",
+        "metal-sound"
+       ]
+      },
+      {
+       "dex": 462,
+       "level": 56,
+       "moves": [
+        "flash-cannon",
+        "thunderbolt",
+        "tri-attack",
+        "screech"
+       ]
+      },
+      {
+       "dex": 376,
+       "level": 56,
+       "moves": [
+        "hammer-arm",
+        "meteor-mash",
+        "bullet-punch",
+        "zen-headbutt"
+       ]
+      },
+      {
+       "dex": 51,
+       "level": 57,
+       "moves": [
+        "earthquake",
+        "iron-head",
+        "sucker-punch",
+        "fissure"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 2,
+     "name_en": "Olivia",
+     "name_de": "Mayla",
+     "type": "rock",
+     "location_en": "Mount Lanakila Pokémon League (Alola)",
+     "location_de": "Pokémon-Liga (Alola)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 348,
+       "level": 56,
+       "moves": [
+        "crush-claw",
+        "x-scissor",
+        "rock-blast"
+       ]
+      },
+      {
+       "dex": 346,
+       "level": 56,
+       "moves": [
+        "rock-tomb",
+        "energy-ball",
+        "stealth-rock"
+       ]
+      },
+      {
+       "dex": 526,
+       "level": 56,
+       "moves": [
+        "stone-edge",
+        "bulldoze",
+        "iron-head"
+       ]
+      },
+      {
+       "dex": 476,
+       "level": 56,
+       "moves": [
+        "earth-power",
+        "power-gem",
+        "thunder-wave",
+        "sandstorm"
+       ]
+      },
+      {
+       "dex": 745,
+       "level": 57,
+       "moves": [
+        "crunch",
+        "stone-edge",
+        "counter",
+        "rock-climb"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 3,
+     "name_en": "Acerola",
+     "name_de": "Lola",
+     "type": "ghost",
+     "location_en": "Mount Lanakila Pokémon League (Alola)",
+     "location_de": "Pokémon-Liga (Alola)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 354,
+       "level": 56,
+       "moves": [
+        "shadow-claw",
+        "feint-attack",
+        "infestation",
+        "screech"
+       ]
+      },
+      {
+       "dex": 426,
+       "level": 56,
+       "moves": [
+        "ominous-wind",
+        "focus-energy",
+        "amnesia",
+        "baton-pass"
+       ]
+      },
+      {
+       "dex": 781,
+       "level": 56,
+       "moves": [
+        "slam",
+        "shadow-ball",
+        "energy-ball",
+        "whirlpool"
+       ]
+      },
+      {
+       "dex": 478,
+       "level": 56,
+       "moves": [
+        "blizzard",
+        "shadow-ball",
+        "confuse-ray",
+        "ice-shard"
+       ]
+      },
+      {
+       "dex": 770,
+       "level": 57,
+       "moves": [
+        "shadow-ball",
+        "earth-power",
+        "giga-drain",
+        "iron-defense"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 4,
+     "name_en": "Kahili",
+     "name_de": "Kahili",
+     "type": "flying",
+     "location_en": "Mount Lanakila Pokémon League (Alola)",
+     "location_de": "Pokémon-Liga (Alola)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 628,
+       "level": 56,
+       "moves": [
+        "crush-claw",
+        "brave-bird",
+        "air-slash",
+        "scary-face"
+       ]
+      },
+      {
+       "dex": 701,
+       "level": 56,
+       "moves": [
+        "flying-press",
+        "throat-chop",
+        "dual-chop",
+        "poison-jab"
+       ]
+      },
+      {
+       "dex": 741,
+       "level": 56,
+       "moves": [
+        "revelation-dance",
+        "teeter-dance",
+        "air-slash",
+        "feather-dance"
+       ]
+      },
+      {
+       "dex": 630,
+       "level": 56,
+       "moves": [
+        "bone-rush",
+        "brave-bird",
+        "punishment",
+        "flatter"
+       ]
+      },
+      {
+       "dex": 733,
+       "level": 57,
+       "moves": [
+        "bullet-seed",
+        "rock-blast",
+        "beak-blast",
+        "screech"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "champion",
+     "order": 1,
+     "name_en": "Hau",
+     "name_de": "Tali",
+     "type": "electric",
+     "location_en": "Mount Lanakila Pokémon League (Alola)",
+     "location_de": "Pokémon-Liga (Alola)",
+     "variant": "if starter is Rowlet",
+     "team": [
+      {
+       "dex": 26,
+       "level": 59,
+       "moves": [
+        "thunderbolt",
+        "quick-attack",
+        "psychic",
+        "focus-blast"
+       ]
+      },
+      {
+       "dex": 136,
+       "level": 58,
+       "moves": [
+        "flare-blitz",
+        "quick-attack",
+        "charm",
+        "baby-doll-eyes"
+       ]
+      },
+      {
+       "dex": 128,
+       "level": 58,
+       "moves": [
+        "zen-headbutt",
+        "iron-head",
+        "earthquake",
+        "double-edge"
+       ]
+      },
+      {
+       "dex": 715,
+       "level": 58,
+       "moves": [
+        "dragon-pulse",
+        "air-slash",
+        "dark-pulse",
+        "super-fang"
+       ]
+      },
+      {
+       "dex": 740,
+       "level": 59,
+       "moves": [
+        "power-up-punch",
+        "ice-hammer",
+        "stone-edge",
+        "dizzy-punch"
+       ]
+      },
+      {
+       "dex": 730,
+       "level": 60,
+       "moves": [
+        "sparkling-aria",
+        "moonblast",
+        "hyper-voice"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "champion",
+     "order": 1,
+     "name_en": "Hau",
+     "name_de": "Tali",
+     "type": "electric",
+     "location_en": "Mount Lanakila Pokémon League (Alola)",
+     "location_de": "Pokémon-Liga (Alola)",
+     "variant": "if starter is Litten",
+     "team": [
+      {
+       "dex": 26,
+       "level": 59,
+       "moves": [
+        "thunderbolt",
+        "quick-attack",
+        "psychic",
+        "focus-blast"
+       ]
+      },
+      {
+       "dex": 134,
+       "level": 58,
+       "moves": [
+        "hydro-pump",
+        "quick-attack",
+        "charm",
+        "baby-doll-eyes"
+       ]
+      },
+      {
+       "dex": 128,
+       "level": 58,
+       "moves": [
+        "zen-headbutt",
+        "iron-head",
+        "earthquake",
+        "double-edge"
+       ]
+      },
+      {
+       "dex": 715,
+       "level": 58,
+       "moves": [
+        "dragon-pulse",
+        "air-slash",
+        "dark-pulse",
+        "super-fang"
+       ]
+      },
+      {
+       "dex": 740,
+       "level": 59,
+       "moves": [
+        "power-up-punch",
+        "ice-hammer",
+        "stone-edge",
+        "dizzy-punch"
+       ]
+      },
+      {
+       "dex": 724,
+       "level": 60,
+       "moves": [
+        "spirit-shackle",
+        "leaf-blade",
+        "smack-down"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "champion",
+     "order": 1,
+     "name_en": "Hau",
+     "name_de": "Tali",
+     "type": "electric",
+     "location_en": "Mount Lanakila Pokémon League (Alola)",
+     "location_de": "Pokémon-Liga (Alola)",
+     "variant": "if starter is Popplio",
+     "team": [
+      {
+       "dex": 26,
+       "level": 59,
+       "moves": [
+        "thunderbolt",
+        "quick-attack",
+        "psychic",
+        "focus-blast"
+       ]
+      },
+      {
+       "dex": 470,
+       "level": 58,
+       "moves": [
+        "leaf-blade",
+        "quick-attack",
+        "charm",
+        "baby-doll-eyes"
+       ]
+      },
+      {
+       "dex": 128,
+       "level": 58,
+       "moves": [
+        "zen-headbutt",
+        "iron-head",
+        "earthquake",
+        "double-edge"
+       ]
+      },
+      {
+       "dex": 715,
+       "level": 58,
+       "moves": [
+        "dragon-pulse",
+        "air-slash",
+        "dark-pulse",
+        "super-fang"
+       ]
+      },
+      {
+       "dex": 740,
+       "level": 59,
+       "moves": [
+        "power-up-punch",
+        "ice-hammer",
+        "stone-edge",
+        "dizzy-punch"
+       ]
+      },
+      {
+       "dex": 727,
+       "level": 60,
+       "moves": [
+        "darkest-lariat",
+        "flare-blitz",
+        "earthquake"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lets-go-pikachu-lets-go-eevee",
+   "gen": 7,
+   "name": "Pokémon: Let’s Go, Pikachu! / Let’s Go, Evoli! (Let’s Go Pikachu/Eevee)",
+   "bosses": [
+    {
+     "kind": "gym",
+     "order": 1,
+     "name_en": "Brock",
+     "name_de": "Rocko",
+     "type": "rock",
+     "location_en": "Pewter City",
+     "location_de": "Marmoria City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 74,
+       "level": 11,
+       "moves": [
+        "tackle"
+       ]
+      },
+      {
+       "dex": 95,
+       "level": 12,
+       "moves": [
+        "headbutt",
+        "bind",
+        "rock-throw"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 2,
+     "name_en": "Misty",
+     "name_de": "Misty",
+     "type": "water",
+     "location_en": "Cerulean City",
+     "location_de": "Azuria City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 54,
+       "level": 18,
+       "moves": [
+        "water-gun",
+        "confusion"
+       ]
+      },
+      {
+       "dex": 121,
+       "level": 19,
+       "moves": [
+        "scald",
+        "psywave",
+        "swift"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 3,
+     "name_en": "Lt. Surge",
+     "name_de": "Major Bob",
+     "type": "electric",
+     "location_en": "Vermilion City",
+     "location_de": "Orania City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 100,
+       "level": 25,
+       "moves": [
+        "thunderbolt",
+        "swift",
+        "light-screen"
+       ]
+      },
+      {
+       "dex": 81,
+       "level": 25,
+       "moves": [
+        "thunderbolt",
+        "sonic-boom"
+       ]
+      },
+      {
+       "dex": 26,
+       "level": 26,
+       "moves": [
+        "thunderbolt",
+        "quick-attack",
+        "double-kick"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 4,
+     "name_en": "Erika",
+     "name_de": "Erika",
+     "type": "grass",
+     "location_en": "Celadon City",
+     "location_de": "Prismania City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 114,
+       "level": 33,
+       "moves": [
+        "mega-drain",
+        "sleep-powder",
+        "bind"
+       ]
+      },
+      {
+       "dex": 70,
+       "level": 33,
+       "moves": [
+        "mega-drain",
+        "poison-jab"
+       ]
+      },
+      {
+       "dex": 45,
+       "level": 34,
+       "moves": [
+        "mega-drain",
+        "moonblast"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 5,
+     "name_en": "Koga",
+     "name_de": "Koga",
+     "type": "poison",
+     "location_en": "Fuchsia City",
+     "location_de": "Fuchsania City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 110,
+       "level": 43,
+       "moves": [
+        "toxic",
+        "protect",
+        "sludge-bomb",
+        "explosion"
+       ]
+      },
+      {
+       "dex": 89,
+       "level": 43,
+       "moves": [
+        "toxic",
+        "protect",
+        "sludge-bomb",
+        "moonblast"
+       ]
+      },
+      {
+       "dex": 42,
+       "level": 43,
+       "moves": [
+        "toxic",
+        "protect",
+        "fly",
+        "leech-life"
+       ]
+      },
+      {
+       "dex": 49,
+       "level": 44,
+       "moves": [
+        "sludge-bomb",
+        "protect",
+        "psychic",
+        "bug-buzz"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 6,
+     "name_en": "Sabrina",
+     "name_de": "Sabrina",
+     "type": "psychic",
+     "location_en": "Saffron City",
+     "location_de": "Saffronia City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 122,
+       "level": 43,
+       "moves": [
+        "psychic",
+        "reflect",
+        "light-screen",
+        "double-slap"
+       ]
+      },
+      {
+       "dex": 80,
+       "level": 43,
+       "moves": [
+        "psychic",
+        "yawn",
+        "surf",
+        "calm-mind"
+       ]
+      },
+      {
+       "dex": 124,
+       "level": 43,
+       "moves": [
+        "psychic",
+        "lovely-kiss",
+        "ice-punch"
+       ]
+      },
+      {
+       "dex": 65,
+       "level": 44,
+       "moves": [
+        "psychic",
+        "night-shade"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 7,
+     "name_en": "Blaine",
+     "name_de": "Pyro",
+     "type": "fire",
+     "location_en": "Cinnabar Island",
+     "location_de": "Zinnoberinsel",
+     "variant": null,
+     "team": [
+      {
+       "dex": 126,
+       "level": 47,
+       "moves": [
+        "flamethrower",
+        "low-kick",
+        "confuse-ray"
+       ]
+      },
+      {
+       "dex": 78,
+       "level": 47,
+       "moves": [
+        "flare-blitz",
+        "quick-attack",
+        "fury-attack"
+       ]
+      },
+      {
+       "dex": 38,
+       "level": 47,
+       "moves": [
+        "fire-blast",
+        "quick-attack"
+       ]
+      },
+      {
+       "dex": 59,
+       "level": 48,
+       "moves": [
+        "flare-blitz",
+        "outrage",
+        "crunch"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 8,
+     "name_en": "Giovanni",
+     "name_de": "Giovanni",
+     "type": "ground",
+     "location_en": "Viridian City",
+     "location_de": "Vertania City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 51,
+       "level": 49,
+       "moves": [
+        "earthquake",
+        "sucker-punch",
+        "slash"
+       ]
+      },
+      {
+       "dex": 31,
+       "level": 49,
+       "moves": [
+        "earthquake",
+        "super-fang",
+        "crunch"
+       ]
+      },
+      {
+       "dex": 34,
+       "level": 49,
+       "moves": [
+        "earthquake",
+        "horn-drill",
+        "megahorn",
+        "poison-jab"
+       ]
+      },
+      {
+       "dex": 112,
+       "level": 50,
+       "moves": [
+        "earthquake",
+        "rock-slide",
+        "megahorn"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 1,
+     "name_en": "Lorelei",
+     "name_de": "Lorelei",
+     "type": "ice",
+     "location_en": "Indigo Plateau",
+     "location_de": "Indigo-Plateau",
+     "variant": null,
+     "team": [
+      {
+       "dex": 87,
+       "level": 51,
+       "moves": [
+        "aqua-jet",
+        "ice-shard",
+        "waterfall"
+       ]
+      },
+      {
+       "dex": 124,
+       "level": 51,
+       "moves": [
+        "lovely-kiss",
+        "blizzard",
+        "psychic"
+       ]
+      },
+      {
+       "dex": 91,
+       "level": 51,
+       "moves": [
+        "ice-beam",
+        "spike-cannon",
+        "hydro-pump"
+       ]
+      },
+      {
+       "dex": 80,
+       "level": 51,
+       "moves": [
+        "psychic",
+        "surf",
+        "flamethrower"
+       ]
+      },
+      {
+       "dex": 131,
+       "level": 52,
+       "moves": [
+        "hydro-pump",
+        "blizzard",
+        "dragon-pulse"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 2,
+     "name_en": "Bruno",
+     "name_de": "Bruno",
+     "type": "fighting",
+     "location_en": "Indigo Plateau",
+     "location_de": "Indigo-Plateau",
+     "variant": null,
+     "team": [
+      {
+       "dex": 95,
+       "level": 52,
+       "moves": [
+        "iron-tail",
+        "stealth-rock",
+        "earthquake"
+       ]
+      },
+      {
+       "dex": 106,
+       "level": 52,
+       "moves": [
+        "brick-break",
+        "feint",
+        "rock-slide"
+       ]
+      },
+      {
+       "dex": 107,
+       "level": 52,
+       "moves": [
+        "ice-punch",
+        "thunder-punch",
+        "fire-punch"
+       ]
+      },
+      {
+       "dex": 62,
+       "level": 52,
+       "moves": [
+        "superpower",
+        "waterfall",
+        "body-slam"
+       ]
+      },
+      {
+       "dex": 68,
+       "level": 53,
+       "moves": [
+        "earthquake",
+        "superpower",
+        "rock-slide"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 3,
+     "name_en": "Agatha",
+     "name_de": "Agathe",
+     "type": "ghost",
+     "location_en": "Indigo Plateau",
+     "location_de": "Indigo-Plateau",
+     "variant": null,
+     "team": [
+      {
+       "dex": 24,
+       "level": 53,
+       "moves": [
+        "glare",
+        "crunch",
+        "poison-jab"
+       ]
+      },
+      {
+       "dex": 94,
+       "level": 53,
+       "moves": [
+        "will-o-wisp",
+        "shadow-ball",
+        "sludge-bomb"
+       ]
+      },
+      {
+       "dex": 42,
+       "level": 53,
+       "moves": [
+        "air-slash",
+        "crunch",
+        "quick-attack"
+       ]
+      },
+      {
+       "dex": 110,
+       "level": 53,
+       "moves": [
+        "sludge-bomb",
+        "shadow-ball",
+        "thunderbolt"
+       ]
+      },
+      {
+       "dex": 94,
+       "level": 54,
+       "moves": [
+        "dazzling-gleam",
+        "shadow-ball",
+        "sludge-bomb"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 4,
+     "name_en": "Lance",
+     "name_de": "Siegfried",
+     "type": "dragon",
+     "location_en": "Indigo Plateau",
+     "location_de": "Indigo-Plateau",
+     "variant": null,
+     "team": [
+      {
+       "dex": 117,
+       "level": 54,
+       "moves": [
+        "hydro-pump",
+        "dragon-pulse",
+        "hyper-beam"
+       ]
+      },
+      {
+       "dex": 142,
+       "level": 54,
+       "moves": [
+        "rock-slide",
+        "earthquake",
+        "hyper-beam"
+       ]
+      },
+      {
+       "dex": 130,
+       "level": 54,
+       "moves": [
+        "waterfall",
+        "iron-tail",
+        "hyper-beam"
+       ]
+      },
+      {
+       "dex": 6,
+       "level": 54,
+       "moves": [
+        "air-slash",
+        "dragon-pulse",
+        "hyper-beam"
+       ]
+      },
+      {
+       "dex": 149,
+       "level": 55,
+       "moves": [
+        "outrage",
+        "fire-punch",
+        "hyper-beam"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "champion",
+     "order": 1,
+     "name_en": "Trace",
+     "name_de": "Trace",
+     "type": "normal",
+     "location_en": "Indigo Plateau",
+     "location_de": "Indigo-Plateau",
+     "variant": "Pikachu version (rival has Eevee line)",
+     "team": [
+      {
+       "dex": 18,
+       "level": 56,
+       "moves": [
+        "quick-attack",
+        "air-slash",
+        "heat-wave"
+       ]
+      },
+      {
+       "dex": 45,
+       "level": 56,
+       "moves": [
+        "solar-beam",
+        "reflect",
+        "sludge-bomb"
+       ]
+      },
+      {
+       "dex": 105,
+       "level": 56,
+       "moves": [
+        "fire-punch",
+        "bonemerang",
+        "brick-break"
+       ]
+      },
+      {
+       "dex": 78,
+       "level": 56,
+       "moves": [
+        "flare-blitz",
+        "quick-attack",
+        "poison-jab"
+       ]
+      },
+      {
+       "dex": 80,
+       "level": 56,
+       "moves": [
+        "psychic",
+        "surf",
+        "light-screen"
+       ]
+      },
+      {
+       "dex": 135,
+       "level": 57,
+       "moves": [
+        "thunder",
+        "quick-attack",
+        "pin-missile"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "champion",
+     "order": 1,
+     "name_en": "Trace",
+     "name_de": "Trace",
+     "type": "normal",
+     "location_en": "Indigo Plateau",
+     "location_de": "Indigo-Plateau",
+     "variant": "Eevee version (rival has Pikachu line)",
+     "team": [
+      {
+       "dex": 18,
+       "level": 56,
+       "moves": [
+        "quick-attack",
+        "air-slash",
+        "heat-wave"
+       ]
+      },
+      {
+       "dex": 45,
+       "level": 56,
+       "moves": [
+        "solar-beam",
+        "reflect",
+        "sludge-bomb"
+       ]
+      },
+      {
+       "dex": 105,
+       "level": 56,
+       "moves": [
+        "fire-punch",
+        "bonemerang",
+        "brick-break"
+       ]
+      },
+      {
+       "dex": 78,
+       "level": 56,
+       "moves": [
+        "flare-blitz",
+        "quick-attack",
+        "poison-jab"
+       ]
+      },
+      {
+       "dex": 80,
+       "level": 56,
+       "moves": [
+        "psychic",
+        "surf",
+        "light-screen"
+       ]
+      },
+      {
+       "dex": 26,
+       "level": 57,
+       "moves": [
+        "thunder",
+        "quick-attack",
+        "iron-tail"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "sword-shield",
+   "gen": 8,
+   "name": "Pokémon Schwert / Schild (Sword/Shield)",
+   "bosses": [
+    {
+     "kind": "gym",
+     "order": 1,
+     "name_en": "Milo",
+     "name_de": "Yarro",
+     "type": "grass",
+     "location_en": "Turffield",
+     "location_de": "Turffield",
+     "variant": null,
+     "team": [
+      {
+       "dex": 829,
+       "level": 19,
+       "moves": [
+        "magical-leaf",
+        "round",
+        "rapid-spin"
+       ]
+      },
+      {
+       "dex": 830,
+       "level": 20,
+       "moves": [
+        "magical-leaf",
+        "leafage",
+        "round"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 2,
+     "name_en": "Nessa",
+     "name_de": "Kate",
+     "type": "water",
+     "location_en": "Hulbury",
+     "location_de": "Keelton",
+     "variant": null,
+     "team": [
+      {
+       "dex": 118,
+       "level": 22,
+       "moves": [
+        "water-pulse",
+        "whirlpool",
+        "horn-attack",
+        "agility"
+       ]
+      },
+      {
+       "dex": 846,
+       "level": 23,
+       "moves": [
+        "aqua-jet",
+        "bite",
+        "whirlpool",
+        "fury-attack"
+       ]
+      },
+      {
+       "dex": 834,
+       "level": 24,
+       "moves": [
+        "razor-shell",
+        "water-gun",
+        "bite",
+        "headbutt"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 3,
+     "name_en": "Kabu",
+     "name_de": "Kabu",
+     "type": "fire",
+     "location_en": "Motostoke",
+     "location_de": "Engine City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 38,
+       "level": 25,
+       "moves": [
+        "will-o-wisp",
+        "fire-spin",
+        "quick-attack",
+        "ember"
+       ]
+      },
+      {
+       "dex": 59,
+       "level": 25,
+       "moves": [
+        "will-o-wisp",
+        "flame-wheel",
+        "bite",
+        "agility"
+       ]
+      },
+      {
+       "dex": 851,
+       "level": 27,
+       "moves": [
+        "flame-wheel",
+        "coil",
+        "bug-bite",
+        "smokescreen"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 4,
+     "name_en": "Bea",
+     "name_de": "Saida",
+     "type": "fighting",
+     "location_en": "Stow-on-Side",
+     "location_de": "Passbeck",
+     "variant": "Sword only",
+     "team": [
+      {
+       "dex": 237,
+       "level": 34,
+       "moves": [
+        "triple-kick",
+        "quick-attack",
+        "counter",
+        "revenge"
+       ]
+      },
+      {
+       "dex": 675,
+       "level": 34,
+       "moves": [
+        "bullet-punch",
+        "circle-throw",
+        "night-slash",
+        "work-up"
+       ]
+      },
+      {
+       "dex": 865,
+       "level": 35,
+       "moves": [
+        "detect",
+        "swords-dance",
+        "brutal-swing",
+        "revenge"
+       ]
+      },
+      {
+       "dex": 68,
+       "level": 36,
+       "moves": [
+        "scary-face",
+        "revenge",
+        "knock-off",
+        "strength"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 4,
+     "name_en": "Allister",
+     "name_de": "Nio",
+     "type": "ghost",
+     "location_en": "Stow-on-Side",
+     "location_de": "Passbeck",
+     "variant": "Shield only",
+     "team": [
+      {
+       "dex": 562,
+       "level": 34,
+       "moves": [
+        "brutal-swing",
+        "hex",
+        "disable"
+       ]
+      },
+      {
+       "dex": 778,
+       "level": 34,
+       "moves": [
+        "shadow-sneak",
+        "baby-doll-eyes",
+        "hone-claws",
+        "slash"
+       ]
+      },
+      {
+       "dex": 864,
+       "level": 35,
+       "moves": [
+        "ancient-power",
+        "curse",
+        "hex"
+       ]
+      },
+      {
+       "dex": 94,
+       "level": 36,
+       "moves": [
+        "venoshock",
+        "hex",
+        "hypnosis",
+        "payback"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 5,
+     "name_en": "Opal",
+     "name_de": "Papella",
+     "type": "fairy",
+     "location_en": "Ballonlea",
+     "location_de": "Fairballey",
+     "variant": null,
+     "team": [
+      {
+       "dex": 110,
+       "level": 36,
+       "moves": [
+        "sludge",
+        "fairy-wind",
+        "tackle"
+       ]
+      },
+      {
+       "dex": 303,
+       "level": 36,
+       "moves": [
+        "draining-kiss",
+        "crunch",
+        "iron-defense",
+        "astonish"
+       ]
+      },
+      {
+       "dex": 468,
+       "level": 37,
+       "moves": [
+        "air-slash",
+        "draining-kiss",
+        "ancient-power"
+       ]
+      },
+      {
+       "dex": 869,
+       "level": 38,
+       "moves": [
+        "draining-kiss",
+        "acid-armor",
+        "sweet-kiss"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 6,
+     "name_en": "Gordie",
+     "name_de": "Mac",
+     "type": "rock",
+     "location_en": "Circhester",
+     "location_de": "Circhester",
+     "variant": "Sword only",
+     "team": [
+      {
+       "dex": 689,
+       "level": 40,
+       "moves": [
+        "shell-smash",
+        "rock-tomb",
+        "razor-shell"
+       ]
+      },
+      {
+       "dex": 213,
+       "level": 40,
+       "moves": [
+        "power-split",
+        "stone-edge",
+        "struggle-bug",
+        "rock-tomb"
+       ]
+      },
+      {
+       "dex": 874,
+       "level": 41,
+       "moves": [
+        "stealth-rock",
+        "rock-tomb",
+        "body-slam",
+        "wonder-room"
+       ]
+      },
+      {
+       "dex": 839,
+       "level": 42,
+       "moves": [
+        "tar-shot",
+        "stealth-rock",
+        "heat-crash",
+        "rock-tomb"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 6,
+     "name_en": "Melony",
+     "name_de": "Mel",
+     "type": "ice",
+     "location_en": "Circhester",
+     "location_de": "Circhester",
+     "variant": "Shield only",
+     "team": [
+      {
+       "dex": 873,
+       "level": 40,
+       "moves": [
+        "icy-wind",
+        "feather-dance",
+        "bug-buzz",
+        "hail"
+       ]
+      },
+      {
+       "dex": 555,
+       "level": 40,
+       "moves": [
+        "icicle-crash",
+        "headbutt",
+        "taunt",
+        "fire-fang"
+       ]
+      },
+      {
+       "dex": 875,
+       "level": 41,
+       "moves": [
+        "amnesia",
+        "freeze-dry",
+        "hail",
+        "icy-wind"
+       ]
+      },
+      {
+       "dex": 131,
+       "level": 42,
+       "moves": [
+        "icy-wind",
+        "ice-beam",
+        "surf",
+        "sing"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 7,
+     "name_en": "Piers",
+     "name_de": "Nezz",
+     "type": "dark",
+     "location_en": "Spikemuth",
+     "location_de": "Spikeford",
+     "variant": null,
+     "team": [
+      {
+       "dex": 560,
+       "level": 44,
+       "moves": [
+        "fake-out",
+        "sand-attack",
+        "brick-break",
+        "payback"
+       ]
+      },
+      {
+       "dex": 687,
+       "level": 45,
+       "moves": [
+        "night-slash",
+        "foul-play",
+        "psycho-cut",
+        "payback"
+       ]
+      },
+      {
+       "dex": 435,
+       "level": 45,
+       "moves": [
+        "sucker-punch",
+        "screech",
+        "toxic",
+        "snarl"
+       ]
+      },
+      {
+       "dex": 862,
+       "level": 46,
+       "moves": [
+        "obstruct",
+        "throat-chop",
+        "counter",
+        "shadow-claw"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 8,
+     "name_en": "Raihan",
+     "name_de": "Roy",
+     "type": "dragon",
+     "location_en": "Hammerlocke",
+     "location_de": "Claw City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 526,
+       "level": 46,
+       "moves": [
+        "stealth-rock",
+        "sand-tomb",
+        "rock-blast",
+        "body-press"
+       ]
+      },
+      {
+       "dex": 330,
+       "level": 47,
+       "moves": [
+        "thunder-punch",
+        "breaking-swipe",
+        "crunch",
+        "steel-wing"
+       ]
+      },
+      {
+       "dex": 844,
+       "level": 46,
+       "moves": [
+        "protect",
+        "glare",
+        "fire-fang",
+        "earth-power"
+       ]
+      },
+      {
+       "dex": 884,
+       "level": 48,
+       "moves": [
+        "breaking-swipe",
+        "body-press",
+        "stone-edge",
+        "iron-head"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "champion",
+     "order": 1,
+     "name_en": "Leon",
+     "name_de": "Delion",
+     "type": "fire",
+     "location_en": "Wyndon Stadium (Wyndon)",
+     "location_de": "Score City",
+     "variant": "if starter is Grookey",
+     "team": [
+      {
+       "dex": 681,
+       "level": 62,
+       "moves": [
+        "kings-shield",
+        "shadow-ball",
+        "sacred-sword",
+        "flash-cannon"
+       ]
+      },
+      {
+       "dex": 887,
+       "level": 62,
+       "moves": [
+        "shadow-ball",
+        "flamethrower",
+        "thunderbolt",
+        "dragon-breath"
+       ]
+      },
+      {
+       "dex": 612,
+       "level": 63,
+       "moves": [
+        "poison-jab",
+        "iron-tail",
+        "outrage",
+        "earthquake"
+       ]
+      },
+      {
+       "dex": 537,
+       "level": 64,
+       "moves": [
+        "toxic",
+        "drain-punch",
+        "liquidation",
+        "earthquake"
+       ]
+      },
+      {
+       "dex": 815,
+       "level": 64,
+       "moves": [
+        "pyro-ball",
+        "feint",
+        "acrobatics",
+        "quick-attack"
+       ]
+      },
+      {
+       "dex": 6,
+       "level": 65,
+       "moves": [
+        "fire-blast",
+        "air-slash",
+        "solar-beam",
+        "ancient-power"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "champion",
+     "order": 1,
+     "name_en": "Leon",
+     "name_de": "Delion",
+     "type": "fire",
+     "location_en": "Wyndon Stadium (Wyndon)",
+     "location_de": "Score City",
+     "variant": "if starter is Scorbunny",
+     "team": [
+      {
+       "dex": 681,
+       "level": 62,
+       "moves": [
+        "kings-shield",
+        "shadow-ball",
+        "sacred-sword",
+        "flash-cannon"
+       ]
+      },
+      {
+       "dex": 887,
+       "level": 62,
+       "moves": [
+        "shadow-ball",
+        "flamethrower",
+        "thunderbolt",
+        "dragon-breath"
+       ]
+      },
+      {
+       "dex": 612,
+       "level": 63,
+       "moves": [
+        "poison-jab",
+        "iron-tail",
+        "outrage",
+        "earthquake"
+       ]
+      },
+      {
+       "dex": 866,
+       "level": 64,
+       "moves": [
+        "teeter-dance",
+        "psychic",
+        "freeze-dry",
+        "thunderbolt"
+       ]
+      },
+      {
+       "dex": 818,
+       "level": 64,
+       "moves": [
+        "snipe-shot",
+        "dark-pulse",
+        "mud-shot",
+        "tearful-look"
+       ]
+      },
+      {
+       "dex": 6,
+       "level": 65,
+       "moves": [
+        "fire-blast",
+        "air-slash",
+        "solar-beam",
+        "ancient-power"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "champion",
+     "order": 1,
+     "name_en": "Leon",
+     "name_de": "Delion",
+     "type": "fire",
+     "location_en": "Wyndon Stadium (Wyndon)",
+     "location_de": "Score City",
+     "variant": "if starter is Sobble",
+     "team": [
+      {
+       "dex": 681,
+       "level": 62,
+       "moves": [
+        "kings-shield",
+        "shadow-ball",
+        "sacred-sword",
+        "flash-cannon"
+       ]
+      },
+      {
+       "dex": 887,
+       "level": 62,
+       "moves": [
+        "shadow-ball",
+        "flamethrower",
+        "thunderbolt",
+        "dragon-breath"
+       ]
+      },
+      {
+       "dex": 612,
+       "level": 63,
+       "moves": [
+        "poison-jab",
+        "iron-tail",
+        "outrage",
+        "earthquake"
+       ]
+      },
+      {
+       "dex": 464,
+       "level": 64,
+       "moves": [
+        "earthquake",
+        "stone-edge",
+        "megahorn",
+        "heat-crash"
+       ]
+      },
+      {
+       "dex": 812,
+       "level": 64,
+       "moves": [
+        "drum-beating",
+        "knock-off",
+        "high-horsepower",
+        "endeavor"
+       ]
+      },
+      {
+       "dex": 6,
+       "level": 65,
+       "moves": [
+        "fire-blast",
+        "air-slash",
+        "solar-beam",
+        "ancient-power"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "brilliant-diamond-shining-pearl",
+   "gen": 8,
+   "name": "Pokémon Strahlender Diamant / Leuchtende Perle (Brilliant Diamond/Shining Pearl)",
+   "bosses": [
+    {
+     "kind": "gym",
+     "order": 1,
+     "name_en": "Roark",
+     "name_de": "Veit",
+     "type": "rock",
+     "location_en": "Oreburgh City",
+     "location_de": "Erzelingen",
+     "variant": null,
+     "team": [
+      {
+       "dex": 74,
+       "level": 12,
+       "moves": [
+        "stealth-rock",
+        "defense-curl",
+        "rollout"
+       ]
+      },
+      {
+       "dex": 95,
+       "level": 12,
+       "moves": [
+        "stealth-rock",
+        "rock-throw",
+        "bind"
+       ]
+      },
+      {
+       "dex": 408,
+       "level": 14,
+       "moves": [
+        "headbutt",
+        "bulldoze",
+        "leer"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 2,
+     "name_en": "Gardenia",
+     "name_de": "Silvana",
+     "type": "grass",
+     "location_en": "Eterna City",
+     "location_de": "Ewigenau",
+     "variant": null,
+     "team": [
+      {
+       "dex": 420,
+       "level": 19,
+       "moves": [
+        "grass-knot",
+        "growth",
+        "dazzling-gleam",
+        "safeguard"
+       ]
+      },
+      {
+       "dex": 387,
+       "level": 19,
+       "moves": [
+        "grass-knot",
+        "razor-leaf",
+        "reflect",
+        "work-up"
+       ]
+      },
+      {
+       "dex": 407,
+       "level": 22,
+       "moves": [
+        "grass-knot",
+        "petal-blizzard",
+        "poison-sting",
+        "stun-spore"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 3,
+     "name_en": "Maylene",
+     "name_de": "Hilda",
+     "type": "fighting",
+     "location_en": "Veilstone City",
+     "location_de": "Schleiede",
+     "variant": null,
+     "team": [
+      {
+       "dex": 307,
+       "level": 27,
+       "moves": [
+        "drain-punch",
+        "light-screen",
+        "flash",
+        "bulk-up"
+       ]
+      },
+      {
+       "dex": 67,
+       "level": 27,
+       "moves": [
+        "low-sweep",
+        "knock-off",
+        "rock-tomb",
+        "bulldoze"
+       ]
+      },
+      {
+       "dex": 448,
+       "level": 30,
+       "moves": [
+        "drain-punch",
+        "screech",
+        "metal-claw",
+        "bulk-up"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 4,
+     "name_en": "Crasher Wake",
+     "name_de": "Wellenbrecher Marinus",
+     "type": "water",
+     "location_en": "Pastoria City",
+     "location_de": "Weideburg",
+     "variant": null,
+     "team": [
+      {
+       "dex": 130,
+       "level": 27,
+       "moves": [
+        "brine",
+        "ice-fang",
+        "crunch",
+        "flail"
+       ]
+      },
+      {
+       "dex": 195,
+       "level": 27,
+       "moves": [
+        "rain-dance",
+        "haze",
+        "mud-shot",
+        "scald"
+       ]
+      },
+      {
+       "dex": 419,
+       "level": 30,
+       "moves": [
+        "brine",
+        "ice-fang",
+        "bite",
+        "aqua-jet"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 5,
+     "name_en": "Fantina",
+     "name_de": "Lamina",
+     "type": "ghost",
+     "location_en": "Hearthome City",
+     "location_de": "Herzhofen",
+     "variant": null,
+     "team": [
+      {
+       "dex": 426,
+       "level": 32,
+       "moves": [
+        "strength-sap",
+        "hex",
+        "fly",
+        "will-o-wisp"
+       ]
+      },
+      {
+       "dex": 94,
+       "level": 34,
+       "moves": [
+        "shadow-claw",
+        "confuse-ray",
+        "sludge-bomb",
+        "dazzling-gleam"
+       ]
+      },
+      {
+       "dex": 429,
+       "level": 36,
+       "moves": [
+        "confuse-ray",
+        "phantom-force",
+        "magical-leaf",
+        "dazzling-gleam"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 6,
+     "name_en": "Byron",
+     "name_de": "Adam",
+     "type": "steel",
+     "location_en": "Canalave City",
+     "location_de": "Fleetburg",
+     "variant": null,
+     "team": [
+      {
+       "dex": 436,
+       "level": 36,
+       "moves": [
+        "confuse-ray",
+        "sandstorm",
+        "trick-room",
+        "flash-cannon"
+       ]
+      },
+      {
+       "dex": 208,
+       "level": 36,
+       "moves": [
+        "thunder-fang",
+        "earthquake",
+        "sandstorm",
+        "gyro-ball"
+       ]
+      },
+      {
+       "dex": 411,
+       "level": 39,
+       "moves": [
+        "iron-defense",
+        "thunderbolt",
+        "stone-edge",
+        "flash-cannon"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 7,
+     "name_en": "Candice",
+     "name_de": "Frida",
+     "type": "ice",
+     "location_en": "Snowpoint City",
+     "location_de": "Blizzach",
+     "variant": null,
+     "team": [
+      {
+       "dex": 459,
+       "level": 38,
+       "moves": [
+        "mist",
+        "razor-leaf",
+        "water-pulse",
+        "avalanche"
+       ]
+      },
+      {
+       "dex": 215,
+       "level": 38,
+       "moves": [
+        "metal-claw",
+        "hone-claws",
+        "dig",
+        "avalanche"
+       ]
+      },
+      {
+       "dex": 308,
+       "level": 40,
+       "moves": [
+        "ice-punch",
+        "bulk-up",
+        "brick-break",
+        "rock-slide"
+       ]
+      },
+      {
+       "dex": 460,
+       "level": 42,
+       "moves": [
+        "aurora-veil",
+        "giga-drain",
+        "earthquake",
+        "blizzard"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 8,
+     "name_en": "Volkner",
+     "name_de": "Volkner",
+     "type": "electric",
+     "location_en": "Sunyshore City",
+     "location_de": "Sonnewik",
+     "variant": null,
+     "team": [
+      {
+       "dex": 26,
+       "level": 46,
+       "moves": [
+        "nuzzle",
+        "volt-switch",
+        "surf",
+        "charge-beam"
+       ]
+      },
+      {
+       "dex": 424,
+       "level": 47,
+       "moves": [
+        "fake-out",
+        "thunderbolt",
+        "double-hit",
+        "last-resort"
+       ]
+      },
+      {
+       "dex": 224,
+       "level": 47,
+       "moves": [
+        "octazooka",
+        "focus-energy",
+        "aurora-beam",
+        "charge-beam"
+       ]
+      },
+      {
+       "dex": 405,
+       "level": 49,
+       "moves": [
+        "thunder-fang",
+        "ice-fang",
+        "crunch",
+        "iron-tail"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 1,
+     "name_en": "Aaron",
+     "name_de": "Herbaro",
+     "type": "bug",
+     "location_en": "Sinnoh Pokémon League",
+     "location_de": "Pokémon-Liga (Sinnoh)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 269,
+       "level": 53,
+       "moves": [
+        "toxic",
+        "bug-buzz",
+        "moonlight",
+        "light-screen"
+       ]
+      },
+      {
+       "dex": 267,
+       "level": 53,
+       "moves": [
+        "bug-buzz",
+        "shadow-ball",
+        "psychic",
+        "quiver-dance"
+       ]
+      },
+      {
+       "dex": 416,
+       "level": 54,
+       "moves": [
+        "acrobatics",
+        "attack-order",
+        "aerial-ace",
+        "defend-order"
+       ]
+      },
+      {
+       "dex": 214,
+       "level": 54,
+       "moves": [
+        "earthquake",
+        "rock-slide",
+        "facade",
+        "brick-break"
+       ]
+      },
+      {
+       "dex": 452,
+       "level": 57,
+       "moves": [
+        "cross-poison",
+        "night-slash",
+        "earthquake",
+        "x-scissor"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 2,
+     "name_en": "Bertha",
+     "name_de": "Teresa",
+     "type": "ground",
+     "location_en": "Sinnoh Pokémon League",
+     "location_de": "Pokémon-Liga (Sinnoh)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 195,
+       "level": 55,
+       "moves": [
+        "recover",
+        "toxic",
+        "earthquake",
+        "surf"
+       ]
+      },
+      {
+       "dex": 185,
+       "level": 56,
+       "moves": [
+        "double-edge",
+        "head-smash",
+        "sucker-punch",
+        "low-kick"
+       ]
+      },
+      {
+       "dex": 76,
+       "level": 56,
+       "moves": [
+        "rock-polish",
+        "heavy-slam",
+        "earthquake",
+        "stone-edge"
+       ]
+      },
+      {
+       "dex": 340,
+       "level": 55,
+       "moves": [
+        "bulldoze",
+        "ice-beam",
+        "belch",
+        "hydro-pump"
+       ]
+      },
+      {
+       "dex": 450,
+       "level": 59,
+       "moves": [
+        "ice-fang",
+        "earthquake",
+        "crunch",
+        "rest"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 3,
+     "name_en": "Flint",
+     "name_de": "Ignaz",
+     "type": "fire",
+     "location_en": "Sinnoh Pokémon League",
+     "location_de": "Pokémon-Liga (Sinnoh)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 78,
+       "level": 58,
+       "moves": [
+        "flame-charge",
+        "iron-tail",
+        "poison-jab",
+        "hypnosis"
+       ]
+      },
+      {
+       "dex": 208,
+       "level": 57,
+       "moves": [
+        "thunder-fang",
+        "fire-fang",
+        "iron-tail",
+        "crunch"
+       ]
+      },
+      {
+       "dex": 426,
+       "level": 58,
+       "moves": [
+        "strength-sap",
+        "minimize",
+        "baton-pass",
+        "will-o-wisp"
+       ]
+      },
+      {
+       "dex": 428,
+       "level": 57,
+       "moves": [
+        "mirror-coat",
+        "high-jump-kick",
+        "quick-attack",
+        "fire-punch"
+       ]
+      },
+      {
+       "dex": 392,
+       "level": 61,
+       "moves": [
+        "fire-punch",
+        "thunder-punch",
+        "close-combat",
+        "mach-punch"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 4,
+     "name_en": "Lucian",
+     "name_de": "Lucian",
+     "type": "psychic",
+     "location_en": "Sinnoh Pokémon League",
+     "location_de": "Pokémon-Liga (Sinnoh)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 122,
+       "level": 59,
+       "moves": [
+        "light-screen",
+        "reflect",
+        "psychic",
+        "dazzling-gleam"
+       ]
+      },
+      {
+       "dex": 203,
+       "level": 59,
+       "moves": [
+        "light-screen",
+        "psychic",
+        "thunderbolt",
+        "trick-room"
+       ]
+      },
+      {
+       "dex": 308,
+       "level": 60,
+       "moves": [
+        "zen-headbutt",
+        "high-jump-kick",
+        "thunder-punch",
+        "ice-punch"
+       ]
+      },
+      {
+       "dex": 65,
+       "level": 60,
+       "moves": [
+        "nasty-plot",
+        "psychic",
+        "future-sight",
+        "shock-wave"
+       ]
+      },
+      {
+       "dex": 437,
+       "level": 63,
+       "moves": [
+        "gyro-ball",
+        "earthquake",
+        "payback",
+        "trick-room"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "champion",
+     "order": 1,
+     "name_en": "Cynthia",
+     "name_de": "Cynthia",
+     "type": "ground",
+     "location_en": "Sinnoh Pokémon League",
+     "location_de": "Pokémon-Liga (Sinnoh)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 442,
+       "level": 61,
+       "moves": [
+        "shadow-ball",
+        "dark-pulse",
+        "psychic",
+        "sucker-punch"
+       ]
+      },
+      {
+       "dex": 407,
+       "level": 60,
+       "moves": [
+        "dazzling-gleam",
+        "shadow-ball",
+        "sludge-bomb",
+        "energy-ball"
+       ]
+      },
+      {
+       "dex": 423,
+       "level": 60,
+       "moves": [
+        "scald",
+        "earthquake",
+        "sludge-bomb",
+        "rock-tomb"
+       ]
+      },
+      {
+       "dex": 448,
+       "level": 63,
+       "moves": [
+        "aura-sphere",
+        "dragon-pulse",
+        "flash-cannon",
+        "nasty-plot"
+       ]
+      },
+      {
+       "dex": 350,
+       "level": 63,
+       "moves": [
+        "recover",
+        "mirror-coat",
+        "ice-beam",
+        "scald"
+       ]
+      },
+      {
+       "dex": 445,
+       "level": 66,
+       "moves": [
+        "dragon-claw",
+        "earthquake",
+        "swords-dance",
+        "poison-jab"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "scarlet-violet",
+   "gen": 9,
+   "name": "Pokémon Karmesin / Purpur (Scarlet/Violet)",
+   "bosses": [
+    {
+     "kind": "gym",
+     "order": 1,
+     "name_en": "Katy",
+     "name_de": "Ronah",
+     "type": "bug",
+     "location_en": "Cortondo",
+     "location_de": "Moldrid",
+     "variant": null,
+     "team": [
+      {
+       "dex": 919,
+       "level": 14,
+       "moves": [
+        "struggle-bug",
+        "double-kick"
+       ]
+      },
+      {
+       "dex": 917,
+       "level": 14,
+       "moves": [
+        "bug-bite",
+        "assurance"
+       ]
+      },
+      {
+       "dex": 216,
+       "level": 15,
+       "moves": [
+        "fury-cutter",
+        "fury-swipes"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 2,
+     "name_en": "Brassius",
+     "name_de": "Colzo",
+     "type": "grass",
+     "location_en": "Artazon",
+     "location_de": "Bolardin",
+     "variant": null,
+     "team": [
+      {
+       "dex": 548,
+       "level": 16,
+       "moves": [
+        "sleep-powder",
+        "mega-drain"
+       ]
+      },
+      {
+       "dex": 928,
+       "level": 16,
+       "moves": [
+        "tackle",
+        "razor-leaf"
+       ]
+      },
+      {
+       "dex": 185,
+       "level": 17,
+       "moves": [
+        "trailblaze",
+        "rock-throw"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 3,
+     "name_en": "Iono",
+     "name_de": "Enigmara",
+     "type": "electric",
+     "location_en": "Levincia",
+     "location_de": "Fermanca City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 940,
+       "level": 23,
+       "moves": [
+        "pluck",
+        "quick-attack",
+        "spark"
+       ]
+      },
+      {
+       "dex": 939,
+       "level": 23,
+       "moves": [
+        "water-gun",
+        "spark"
+       ]
+      },
+      {
+       "dex": 404,
+       "level": 23,
+       "moves": [
+        "spark",
+        "bite"
+       ]
+      },
+      {
+       "dex": 429,
+       "level": 24,
+       "moves": [
+        "charge-beam",
+        "hex",
+        "confuse-ray"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 4,
+     "name_en": "Kofu",
+     "name_de": "Kombu",
+     "type": "water",
+     "location_en": "Cascarrafa",
+     "location_de": "Garrafosa City",
+     "variant": null,
+     "team": [
+      {
+       "dex": 976,
+       "level": 29,
+       "moves": [
+        "slash",
+        "pluck",
+        "aqua-cutter"
+       ]
+      },
+      {
+       "dex": 961,
+       "level": 29,
+       "moves": [
+        "mud-slap",
+        "water-pulse",
+        "headbutt"
+       ]
+      },
+      {
+       "dex": 740,
+       "level": 30,
+       "moves": [
+        "crabhammer",
+        "rock-smash",
+        "slam"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 5,
+     "name_en": "Larry",
+     "name_de": "Aoki",
+     "type": "normal",
+     "location_en": "Medali",
+     "location_de": "Mesclarra",
+     "variant": null,
+     "team": [
+      {
+       "dex": 775,
+       "level": 35,
+       "moves": [
+        "yawn",
+        "sucker-punch",
+        "slam"
+       ]
+      },
+      {
+       "dex": 982,
+       "level": 35,
+       "moves": [
+        "hyper-drill",
+        "drill-run",
+        "glare"
+       ]
+      },
+      {
+       "dex": 398,
+       "level": 36,
+       "moves": [
+        "facade",
+        "aerial-ace"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 6,
+     "name_en": "Ryme",
+     "name_de": "Etta",
+     "type": "ghost",
+     "location_en": "Montenevera",
+     "location_de": "Frigomonta",
+     "variant": null,
+     "team": [
+      {
+       "dex": 354,
+       "level": 41,
+       "moves": [
+        "icy-wind",
+        "sucker-punch",
+        "shadow-sneak"
+       ]
+      },
+      {
+       "dex": 778,
+       "level": 41,
+       "moves": [
+        "light-screen",
+        "shadow-sneak",
+        "slash"
+       ]
+      },
+      {
+       "dex": 972,
+       "level": 41,
+       "moves": [
+        "play-rough",
+        "crunch",
+        "phantom-force"
+       ]
+      },
+      {
+       "dex": 849,
+       "level": 42,
+       "moves": [
+        "discharge",
+        "hex",
+        "hyper-voice"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 7,
+     "name_en": "Tulip",
+     "name_de": "Tulia",
+     "type": "psychic",
+     "location_en": "Alfornada",
+     "location_de": "Asarilla",
+     "variant": null,
+     "team": [
+      {
+       "dex": 981,
+       "level": 44,
+       "moves": [
+        "crunch",
+        "zen-headbutt",
+        "reflect"
+       ]
+      },
+      {
+       "dex": 282,
+       "level": 44,
+       "moves": [
+        "psychic",
+        "dazzling-gleam",
+        "energy-ball"
+       ]
+      },
+      {
+       "dex": 956,
+       "level": 44,
+       "moves": [
+        "psychic",
+        "quick-attack",
+        "shadow-ball"
+       ]
+      },
+      {
+       "dex": 671,
+       "level": 45,
+       "moves": [
+        "psychic",
+        "moonblast",
+        "petal-blizzard"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "gym",
+     "order": 8,
+     "name_en": "Grusha",
+     "name_de": "Grusha",
+     "type": "ice",
+     "location_en": "Glaseado Mountain (Glaseado)",
+     "location_de": "Montanata",
+     "variant": null,
+     "team": [
+      {
+       "dex": 873,
+       "level": 47,
+       "moves": [
+        "blizzard",
+        "bug-buzz",
+        "tailwind"
+       ]
+      },
+      {
+       "dex": 614,
+       "level": 47,
+       "moves": [
+        "aqua-jet",
+        "icicle-crash",
+        "earthquake"
+       ]
+      },
+      {
+       "dex": 975,
+       "level": 47,
+       "moves": [
+        "ice-spinner",
+        "liquidation",
+        "ice-shard"
+       ]
+      },
+      {
+       "dex": 334,
+       "level": 48,
+       "moves": [
+        "ice-beam",
+        "dragon-pulse",
+        "moonblast",
+        "hurricane"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 1,
+     "name_en": "Rika",
+     "name_de": "Cay",
+     "type": "ground",
+     "location_en": "Paldea Pokémon League (Area Zero Hall of Fame route)",
+     "location_de": "Pokémon-Liga (Paldea)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 340,
+       "level": 57,
+       "moves": [
+        "muddy-water",
+        "earth-power",
+        "blizzard",
+        "future-sight"
+       ]
+      },
+      {
+       "dex": 323,
+       "level": 57,
+       "moves": [
+        "earth-power",
+        "fire-blast",
+        "flash-cannon",
+        "yawn"
+       ]
+      },
+      {
+       "dex": 232,
+       "level": 57,
+       "moves": [
+        "earthquake",
+        "stone-edge",
+        "iron-head",
+        "poison-jab"
+       ]
+      },
+      {
+       "dex": 51,
+       "level": 57,
+       "moves": [
+        "earthquake",
+        "rock-slide",
+        "sucker-punch",
+        "sandstorm"
+       ]
+      },
+      {
+       "dex": 980,
+       "level": 58,
+       "moves": [
+        "earthquake",
+        "liquidation",
+        "toxic",
+        "protect"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 2,
+     "name_en": "Poppy",
+     "name_de": "Poppy",
+     "type": "flying",
+     "location_en": "Paldea Pokémon League (Area Zero Hall of Fame route)",
+     "location_de": "Pokémon-Liga (Paldea)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 879,
+       "level": 58,
+       "moves": [
+        "high-horsepower",
+        "play-rough",
+        "heavy-slam",
+        "stealth-rock"
+       ]
+      },
+      {
+       "dex": 462,
+       "level": 58,
+       "moves": [
+        "discharge",
+        "flash-cannon",
+        "light-screen",
+        "tri-attack"
+       ]
+      },
+      {
+       "dex": 437,
+       "level": 58,
+       "moves": [
+        "iron-head",
+        "zen-headbutt",
+        "rock-blast",
+        "earthquake"
+       ]
+      },
+      {
+       "dex": 823,
+       "level": 58,
+       "moves": [
+        "brave-bird",
+        "iron-head",
+        "body-press",
+        "iron-defense"
+       ]
+      },
+      {
+       "dex": 959,
+       "level": 59,
+       "moves": [
+        "play-rough",
+        "gigaton-hammer",
+        "brick-break",
+        "stone-edge"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 3,
+     "name_en": "Larry",
+     "name_de": "Aoki",
+     "type": "normal",
+     "location_en": "Paldea Pokémon League (Area Zero Hall of Fame route)",
+     "location_de": "Pokémon-Liga (Paldea)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 357,
+       "level": 59,
+       "moves": [
+        "air-slash",
+        "solar-beam",
+        "dragon-pulse",
+        "sunny-day"
+       ]
+      },
+      {
+       "dex": 741,
+       "level": 59,
+       "moves": [
+        "revelation-dance",
+        "air-slash",
+        "teeter-dance",
+        "icy-wind"
+       ]
+      },
+      {
+       "dex": 334,
+       "level": 59,
+       "moves": [
+        "moonblast",
+        "flamethrower",
+        "ice-beam",
+        "dragon-pulse"
+       ]
+      },
+      {
+       "dex": 398,
+       "level": 59,
+       "moves": [
+        "facade",
+        "brave-bird",
+        "close-combat",
+        "thief"
+       ]
+      },
+      {
+       "dex": 973,
+       "level": 60,
+       "moves": [
+        "brave-bird",
+        "close-combat",
+        "throat-chop",
+        "liquidation"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "elite4",
+     "order": 4,
+     "name_en": "Hassel",
+     "name_de": "Sinius",
+     "type": "dragon",
+     "location_en": "Paldea Pokémon League (Area Zero Hall of Fame route)",
+     "location_de": "Pokémon-Liga (Paldea)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 715,
+       "level": 60,
+       "moves": [
+        "air-slash",
+        "dragon-pulse",
+        "super-fang",
+        "hyper-voice"
+       ]
+      },
+      {
+       "dex": 612,
+       "level": 60,
+       "moves": [
+        "dragon-claw",
+        "crunch",
+        "iron-head",
+        "rock-tomb"
+       ]
+      },
+      {
+       "dex": 691,
+       "level": 60,
+       "moves": [
+        "sludge-bomb",
+        "dragon-pulse",
+        "hydro-pump",
+        "thunderbolt"
+       ]
+      },
+      {
+       "dex": 841,
+       "level": 60,
+       "moves": [
+        "dragon-rush",
+        "seed-bomb",
+        "aerial-ace",
+        "leech-seed"
+       ]
+      },
+      {
+       "dex": 998,
+       "level": 61,
+       "moves": [
+        "icicle-crash",
+        "brick-break",
+        "glaive-rush"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "champion",
+     "order": 1,
+     "name_en": "Geeta",
+     "name_de": "Sagaria",
+     "type": "poison",
+     "location_en": "Paldea Pokémon League",
+     "location_de": "Pokémon-Liga (Paldea)",
+     "variant": null,
+     "team": [
+      {
+       "dex": 956,
+       "level": 61,
+       "moves": [
+        "lumina-crash",
+        "dazzling-gleam",
+        "quick-attack",
+        "reflect"
+       ]
+      },
+      {
+       "dex": 673,
+       "level": 61,
+       "moves": [
+        "horn-leech",
+        "zen-headbutt",
+        "play-rough",
+        "bulk-up"
+       ]
+      },
+      {
+       "dex": 976,
+       "level": 61,
+       "moves": [
+        "aqua-jet",
+        "liquidation",
+        "psycho-cut",
+        "ice-fang"
+       ]
+      },
+      {
+       "dex": 713,
+       "level": 61,
+       "moves": [
+        "avalanche",
+        "crunch",
+        "earthquake",
+        "body-press"
+       ]
+      },
+      {
+       "dex": 983,
+       "level": 61,
+       "moves": [
+        "iron-head",
+        "kowtow-cleave",
+        "zen-headbutt",
+        "stone-edge"
+       ]
+      },
+      {
+       "dex": 970,
+       "level": 62,
+       "moves": [
+        "tera-blast",
+        "sludge-wave",
+        "earth-power",
+        "dazzling-gleam"
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
