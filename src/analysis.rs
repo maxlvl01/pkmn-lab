@@ -12,6 +12,19 @@ pub struct Mon {
     /// everything else the save knows (Gen 4 so far); None for a team entered by hand
     #[serde(default)]
     pub details: Option<Details>,
+    /// nature picked by hand (index into the 25 natures) when the save doesn't give one
+    #[serde(default)]
+    pub nature: Option<u8>,
+}
+
+impl Mon {
+    /// The save's nature, else the one picked by hand.
+    pub fn nature(&self) -> Option<u8> { self.details.as_ref().map(|d| d.nature).or(self.nature) }
+
+    /// Stats at `level` when the save has none: average IVs (15), no EVs, the known nature or a neutral one.
+    pub fn est_stats(&self, base: &[u16; 6], level: u8) -> [u16; 6] {
+        real_stats(base, &[15; 6], &[0; 6], self.nature().unwrap_or(0), level)
+    }
 }
 
 /// One Pokémon's data from the save. Stat arrays use the base-stat order: KP, Angriff, Vert., Sp. Ang., Sp. Ver., Init.
@@ -599,7 +612,7 @@ fn plan(dex: &Dex, game: &Game, m: &Mon, level: u8, targets: &[(Vec<u8>, f32)]) 
     let gn = vg.gn;
     let (mut growth, stages) = grow(game, m.species, m.level, level.max(m.level));
     let sp = dex.species.get(&growth.species).or(dex.species.get(&m.species)).expect("species");
-    growth.stats = stats_at(&sp.base_stats, growth.level);
+    growth.stats = m.est_stats(&sp.base_stats, growth.level);
     let types = dex.species_types(sp, gn);
     let set_value = |set: &[(u8, f32)]| -> f32 {
         targets.iter().map(|(ty, w)| w * set.iter().map(|&(mt, v)| dex.eff(mt, ty, gn) * v).fold(0.0, f32::max)).sum()
@@ -803,7 +816,7 @@ mod tests {
     fn rival_follows_your_starter() {
         let boss = |sp: u16| Boss { kind: "rival".into(), name_en: String::new(), name_de: String::new(), type_: None, location_en: None,
             location_de: None, variant: None, team: vec![crate::data::BossMon { dex: sp, level: 5, moves: vec![] }], id: None };
-        let karnimani = [Mon { species: 158, level: 10, moves: vec![], nickname: None, details: None }];
+        let karnimani = [Mon { species: 158, level: 10, moves: vec![], nickname: None, details: None, nature: None }];
         assert!(rival_matches(&karnimani, &boss(152)));  // you: water -> Silber: Endivie
         assert!(!rival_matches(&karnimani, &boss(155)));
         assert!(!rival_matches(&karnimani, &boss(158)));
@@ -819,8 +832,8 @@ mod tests {
         let aqua = dex.find_move("Aquaknarre").unwrap().id;
         let tackle = dex.find_move("Tackle").unwrap().id;
         let team = vec![
-            Mon { species: 74, level: 8, moves: vec![tackle], nickname: None, details: None },    // Kleinstein
-            Mon { species: 158, level: 10, moves: vec![aqua], nickname: None, details: None },    // Karnimani
+            Mon { species: 74, level: 8, moves: vec![tackle], nickname: None, details: None, nature: None },    // Kleinstein
+            Mon { species: 158, level: 10, moves: vec![aqua], nickname: None, details: None, nature: None },    // Karnimani
         ];
         let r = analyse(&dex, &game, &team, None);
         let ground = r.defense.iter().find(|d| d.atk == 5).unwrap();
@@ -848,7 +861,7 @@ mod tests {
         let vg = dex.vg("heartgold-soulsilver").unwrap();
         let learn = dex.learnsets(vg);
         let bosses = dex.bosses.iter().find(|g| g.id == vg.ident).unwrap().bosses.clone();
-        let team = vec![Mon { species: 158, level: 10, moves: vec![], nickname: None, details: None }];
+        let team = vec![Mon { species: 158, level: 10, moves: vec![], nickname: None, details: None, nature: None }];
         let game = Game { vg, bosses: &bosses, badges: &[], learn: &learn, owned_machines: None, regional: true, trainers: &[], beaten: None };
         let r = analyse(&dex, &game, &team, None);
         // Without a ROM: rough order by Johto Pokédex number, never later than the strongest tip's.
@@ -867,8 +880,18 @@ mod tests {
     }
 
     #[test]
+    fn hand_picked_nature_changes_estimate() {
+        let base = [100; 6];
+        let plain = Mon { species: 1, level: 50, ..Default::default() };
+        let hart = Mon { nature: Some(3), ..plain.clone() }; // Hart (Adamant): +Angriff −Sp. Ang.
+        let (a, b) = (plain.est_stats(&base, 50), hart.est_stats(&base, 50));
+        assert_eq!(a, stats_at(&base, 50), "no nature = the old neutral estimate");
+        assert!(b[1] > a[1] && b[3] < a[3] && b[0] == a[0]);
+    }
+
+    #[test]
     fn uneven_levels_cost_rating() {
-        let mon = |level| Mon { species: 16, level, moves: vec![], nickname: None, details: None };
+        let mon = |level| Mon { species: 16, level, moves: vec![], nickname: None, details: None, nature: None };
         assert_eq!(level_balance(&[mon(20), mon(19), mon(18)]), 1.0);
         let lopsided = level_balance(&[mon(40), mon(10), mon(10), mon(10), mon(10), mon(10)]);
         assert!(lopsided < 0.4, "{lopsided}");
@@ -891,7 +914,7 @@ mod tests {
         // A full analysis runs on a Kanto boss list with Gen 5 rules.
         let bosses = dex.bosses.iter().find(|g| g.id == kanto.ident).unwrap().bosses.clone();
         let game = Game { vg: kanto, bosses: &bosses, badges: &[], learn: &learn, owned_machines: None, regional: true, trainers: &[], beaten: None };
-        let team = [Mon { species: 571, level: 30, moves: vec![], nickname: None, details: None }];
+        let team = [Mon { species: 571, level: 30, moves: vec![], nickname: None, details: None, nature: None }];
         assert!(!analyse(&dex, &game, &team, None).bosses.is_empty());
     }
 }

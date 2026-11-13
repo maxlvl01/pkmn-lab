@@ -554,6 +554,21 @@ impl App {
                             if ui.add(egui::DragValue::new(&mut self.team[i].level).range(1..=100)).changed() { self.dirty = true; }
                             if ui.small_button(t(l, "Remove", "Entfernen")).clicked() { remove = Some(i); }
                         });
+                        // Natures exist from Gen 3; a Gen 4 save already gives the real one.
+                        if gn >= 3 && self.team[i].species != 0 {
+                            match self.team[i].details.as_ref().map(|d| d.nature) {
+                                Some(n) => { ui.label(RichText::new(format!("{} {}", t(l, "Nature", "Wesen"), nature_text(l, n))).color(MUTED).small()); }
+                                None => {
+                                    let mut n = self.team[i].nature;
+                                    let shown = n.map_or_else(|| t(l, "Nature: unknown", "Wesen: unbekannt").to_string(), |n| nature_text(l, n));
+                                    egui::ComboBox::from_id_salt(("nature", i)).width(150.0).height(320.0).selected_text(shown).show_ui(ui, |ui| {
+                                        ui.selectable_value(&mut n, None, t(l, "unknown (neutral)", "unbekannt (neutral)"));
+                                        for k in 0..25u8 { ui.selectable_value(&mut n, Some(k), nature_text(l, k)); }
+                                    });
+                                    if n != self.team[i].nature { self.team[i].nature = n; self.dirty = true; }
+                                }
+                            }
+                        }
                     });
                 });
                 // Name suggestions while typing.
@@ -572,7 +587,7 @@ impl App {
                         ui.horizontal(|ui| {
                             self.species_sprite(ui, id, 28.0);
                             if ui.selectable_label(false, format!("#{id} {name}")).clicked() {
-                                self.team[i] = Mon { species: id, level: self.team[i].level, moves: vec![], nickname: None, details: None };
+                                self.team[i] = Mon { species: id, level: self.team[i].level, moves: vec![], nickname: None, details: None, nature: self.team[i].nature() };
                                 self.search[i] = name.clone();
                                 self.dirty = true;
                             }
@@ -591,7 +606,7 @@ impl App {
         if self.team.len() < 6
             && ui.add_sized([ui.available_width(), 28.0], egui::Button::new(t(l, "+ Add Pokémon", "+ Pokémon hinzufügen"))).clicked()
         {
-            self.team.push(Mon { species: 0, level: 5, moves: vec![], nickname: None, details: None });
+            self.team.push(Mon { species: 0, level: 5, moves: vec![], nickname: None, details: None, nature: None });
             self.search.push(String::new());
         }
     }
@@ -669,7 +684,7 @@ impl App {
                 self.open_save_dialog();
             }
             if ui.add_sized([220.0, 36.0], egui::Button::new(t(l, "Enter team by hand", "Team von Hand eingeben"))).clicked() {
-                self.team.push(Mon { species: 0, level: 5, moves: vec![], nickname: None, details: None });
+                self.team.push(Mon { species: 0, level: 5, moves: vec![], nickname: None, details: None, nature: None });
             }
         });
     }
@@ -870,7 +885,7 @@ impl App {
                 ui.end_row();
                 for (i, m) in self.team.iter().enumerate() {
                     let Some(s) = self.dex.species.get(&m.species) else { continue };
-                    let stats = m.details.as_ref().map_or_else(|| analysis::stats_at(&s.base_stats, m.level), |d| d.stats);
+                    let stats = m.details.as_ref().map_or_else(|| m.est_stats(&s.base_stats, m.level), |d| d.stats);
                     ui.horizontal(|ui| {
                         swatch(ui, MEMBER_COLORS[i % 6]);
                         self.species_sprite(ui, m.species, 40.0);
@@ -960,7 +975,7 @@ impl App {
         let vg = self.dex.vg(&self.game_id).unwrap();
         let d = m.details.as_ref();
         let types = self.dex.species_types(s, gn);
-        let stats = d.map_or_else(|| analysis::stats_at(&s.base_stats, m.level), |d| d.stats);
+        let stats = d.map_or_else(|| m.est_stats(&s.base_stats, m.level), |d| d.stats);
         card(ui, |ui| {
             ui.set_width(ui.available_width() - 28.0);
             // --- header ---
@@ -977,14 +992,17 @@ impl App {
                         if d.is_some_and(|d| d.pokerus & 0x0F != 0) { pill(ui, "Pokérus", Color32::from_rgb(0xb0, 0x6a, 0xe0)); }
                     });
                     match d {
-                        None => { ui.label(RichText::new(t(l, "Entered by hand: nature, IVs, EVs and item are unknown; stats are estimates.",
-                            "Von Hand eingegeben: Wesen, DVs, Fleißpunkte und Item sind unbekannt; die Werte sind geschätzt.")).color(MUTED)); }
+                        None => match m.nature {
+                            Some(n) => { ui.label(RichText::new(format!("{} {}. {}", t(l, "Nature", "Wesen"), nature_text(l, n),
+                                t(l, "Entered by hand: IVs, EVs and item are unknown; stats are estimates.",
+                                    "Von Hand eingegeben: DVs, Fleißpunkte und Item sind unbekannt; die Werte sind geschätzt."))).color(MUTED)); }
+                            None => { ui.label(RichText::new(t(l, "Entered by hand: nature, IVs, EVs and item are unknown; stats are estimates.",
+                                "Von Hand eingegeben: Wesen, DVs, Fleißpunkte und Item sind unbekannt; die Werte sind geschätzt.")).color(MUTED)); }
+                        },
                         Some(d) => {
                             egui::Grid::new(("facts", i)).spacing([18.0, 3.0]).show(ui, |ui| {
                                 let fact = |ui: &mut Ui, k: &str, v: String| { ui.label(RichText::new(k).color(MUTED)); ui.label(v); };
-                                let nat = NATURES[d.nature as usize % 25];
-                                let eff = analysis::nature_effect(d.nature).map(|(u, dn)| format!("  (+{} −{})", stat_short(l)[u], stat_short(l)[dn])).unwrap_or_default();
-                                fact(ui, t(l, "Nature", "Wesen"), format!("{}{eff}", l.pick(nat.0, nat.1)));
+                                fact(ui, t(l, "Nature", "Wesen"), nature_text(l, d.nature));
                                 let ab = self.dex.abilities.get(&d.ability).map(|(en, de)| l.pick(en, de).to_string()).unwrap_or_else(|| format!("#{}", d.ability));
                                 fact(ui, t(l, "Ability", "Fähigkeit"), ab);
                                 ui.end_row();
@@ -1129,7 +1147,7 @@ impl App {
             // --- growth to Lv 100 ---
             egui::Frame::new().fill(CARD_HI).corner_radius(CornerRadius::same(8)).inner_margin(egui::Margin::same(10)).show(ui, |ui| {
                 ui.label(RichText::new(t(l, "Stat growth to Lv 100 (level evolutions included)", "Wertentwicklung bis Lv 100 (mit Level-Entwicklungen)")).strong());
-                let (ivs, evs, nature) = d.map_or(([15; 6], [0; 6], 0), |d| (d.ivs, d.evs, d.nature));
+                let (ivs, evs, nature) = d.map_or(([15; 6], [0; 6], m.nature.unwrap_or(0)), |d| (d.ivs, d.evs, d.nature));
                 let mut lines: Vec<Vec<(f32, f32)>> = vec![vec![]; 6];
                 let mut marks = vec![];
                 let mut sp = m.species;
@@ -1835,6 +1853,13 @@ const MEMBER_COLORS: [Color32; 6] = [
     Color32::from_rgb(0xe8, 0x4a, 0x4a), Color32::from_rgb(0x3d, 0x9b, 0xe8), Color32::from_rgb(0x4c, 0xc2, 0x7a),
     Color32::from_rgb(0xf0, 0xb9, 0x3a), Color32::from_rgb(0xb0, 0x6a, 0xe0), Color32::from_rgb(0x3a, 0xd0, 0xc8),
 ];
+
+/// "Hart (+Ang −Sp.A)", or just the name for the five neutral natures.
+fn nature_text(l: Lang, n: u8) -> String {
+    let nat = NATURES[n as usize % 25];
+    let eff = analysis::nature_effect(n).map(|(u, d)| format!(" (+{} −{})", stat_short(l)[u], stat_short(l)[d])).unwrap_or_default();
+    format!("{}{eff}", l.pick(nat.0, nat.1))
+}
 
 /// German nature names from the ROM (a/0/2/7 file 34), with the English ones.
 const NATURES: [(&str, &str); 25] = [

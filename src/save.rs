@@ -145,6 +145,7 @@ fn gen12(d: &[u8]) -> Option<SaveInfo> {
                 moves: d[m + moves_at..m + moves_at + 4].iter().filter(|&&x| x != 0).map(|&x| x as u16).collect(),
                 nickname: Some(gb_text(&d[nick_at..nick_at + 11])),
                 details: None,
+                nature: None,
             }
         })
         .collect();
@@ -237,6 +238,7 @@ fn gen3(d: &[u8]) -> Option<SaveInfo> {
                 moves: (0..4).map(|k| u16le(&m, 0x2C + 2 * k)).filter(|&x| x != 0).collect(),
                 nickname: Some(gen3_text(&m[8..18])),
                 details: None,
+                nature: None,
             })
         })
         .collect();
@@ -308,6 +310,7 @@ fn pk_mon(m: &[u8], gen6: bool) -> Option<Mon> {
         moves: (0..4).map(|k| u16le(m, moves_at + 2 * k)).filter(|&x| x != 0).collect(),
         nickname: None,
         details: None,
+        nature: None,
     })
 }
 
