@@ -1,6 +1,6 @@
 [package]
 name = "pkmn-lab"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 description = "Team analyser for Pokémon runs: reads emulator saves, rates your team, plans the next bosses"
 repository = "https://github.com/maxlvl01/pkmn-lab"

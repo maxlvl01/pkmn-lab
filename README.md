@@ -28,7 +28,7 @@ You can also start it with files: `pkmn-lab.exe <save> [rom.nds]` (or "Öffnen m
   super effectively (a counter makes a weakness count less).
 - **Angriff:** your best multiplier against each type and how many members hit it super effectively.
 - **Projektion:** pick any boss ahead (default: the next one). Each member is raised to that boss's top level, evolves
-  where a level evolution allows it (stones, trade and friendship are shown as options), and gets its stats at that level,
+  where a level evolution allows it (stones, trade and friendship are shown as options; friendship shows how far the save is from 220, and day or night), and gets its stats at that level,
   what it learns on the way and the best 4 attacks for that fight (power, STAB, accuracy, matching attack stat, coverage).
   TMs/HMs in your bag are used; others appear as "TM-Ideen". With an HGSS ROM, the hack's own evolutions are used.
 - **Fangen:** which typing would raise the team rating most, with example Pokémon, from this game's Pokédex or the
