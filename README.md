@@ -11,7 +11,8 @@ It is a single file: no installer, and it updates itself (checks GitHub once a d
 2. Drag your emulator save (`.sav`, `.dsv`, …) into the window, or click **Spielstand öffnen**. Game, badges, team,
    moves and the TMs in your bag are read from it. No save? **Team von Hand eingeben**, then pick the game.
 3. Optional for HeartGold/SoulSilver: drag the `.nds` ROM in as well. Then the real boss teams and level-up moves are read
-   from the ROM, so ROM hacks (e.g. hard mods) show what you will actually face.
+   from the ROM, plus every other trainer, your rival and where wild Pokémon live, so ROM hacks (e.g. hard mods) show
+   what you will actually face.
 
 The app remembers the last save and ROM and re-reads the save at every start, so it is always current.
 You can also start it with files: `pkmn-lab.exe <save> [rom.nds]` (or "Öffnen mit").
@@ -26,13 +27,22 @@ You can also start it with files: `pkmn-lab.exe <save> [rom.nds]` (or "Öffnen m
   where a level evolution allows it (stones, trade and friendship are shown as options), and gets its stats at that level,
   what it learns on the way and the best 4 attacks for that fight (power, STAB, accuracy, matching attack stat, coverage).
   TMs/HMs in your bag are used; others appear as "TM-Ideen". With an HGSS ROM, the hack's own evolutions are used.
-- **Fangen:** which typing would raise the team rating most, with example Pokémon.
+- **Fangen:** which typing would raise the team rating most, with example Pokémon, from this game's Pokédex or the
+  national one. With an HGSS ROM: only Pokémon you can catch in the wild there (or evolve from one), each with place and
+  level, ones you can get soon first, plus a top pick for your free team slot ("Empfehlung für Platz 6").
 - **Bosse:** every gym leader, Elite Four member and champion still ahead, with their moves and your best answer to each
   of their Pokémon. Each verdict is judged with your team as it will be at that boss's level (evolved, with its projected
-  moves and stats), not with today's team.
+  moves and stats), not with today's team. Beaten bosses can be shown too.
+- **Trainer** (HGSS ROM): every trainer and your rival (the version matching your starter), judged the same way.
+  Filter by upcoming / beaten (from your save) / all, or search by name, class or Pokémon.
 
-Team rating 0–100: offensive coverage 45 %, types handled defensively 45 %, team size 10 %, minus a penalty for
-stacked weaknesses.
+**Spoiler-Schutz:** on at every start. Teams and moves of fights you have not beaten yet stay hidden (the verdict still
+shows) until you confirm "Spoiler anzeigen".
+
+Team rating 0–100: 60 % today's team, 40 % its potential (evolved, at the level of the last boss ahead). Each part:
+offensive coverage 45 %, types handled defensively 45 %, team size 10 %, minus a penalty for stacked weaknesses.
+
+Big screens: cards flow into several columns; text size via A− / A+ or Ctrl + / Ctrl −.
 
 ## Support
 
