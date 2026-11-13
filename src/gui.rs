@@ -560,16 +560,18 @@ impl App {
                 let q = crate::data::norm(&self.search[i]);
                 let current = if self.team[i].species == 0 { String::new() } else { crate::data::norm(&self.sname(self.team[i].species)) };
                 if !q.is_empty() && q != current {
+                    // A number ("25" or "#25") finds that national Pokédex entry.
+                    let no: Option<u16> = q.parse().ok();
                     let mut hits: Vec<(u16, String)> = self.dex.species.values()
                         .filter(|s| s.gn <= gn)
                         .map(|s| (s.id, l.pick(&s.name_en, &s.name_de).to_string()))
-                        .filter(|(_, n)| crate::data::norm(n).starts_with(&q))
+                        .filter(|(id, n)| match no { Some(no) => *id == no, None => crate::data::norm(n).starts_with(&q) })
                         .collect();
                     hits.sort_by(|a, b| a.1.cmp(&b.1));
                     for (id, name) in hits.into_iter().take(6) {
                         ui.horizontal(|ui| {
                             self.species_sprite(ui, id, 28.0);
-                            if ui.selectable_label(false, &name).clicked() {
+                            if ui.selectable_label(false, format!("#{id} {name}")).clicked() {
                                 self.team[i] = Mon { species: id, level: self.team[i].level, moves: vec![], nickname: None, details: None };
                                 self.search[i] = name.clone();
                                 self.dirty = true;
@@ -603,16 +605,42 @@ impl App {
             .collect();
         options.sort();
         options.dedup();
-        let mut named: Vec<(u16, String)> = options.into_iter().map(|id| (id, self.mname(id))).collect();
+        // Each move with how it is learnt: the lowest level-up level, else TM.
+        let how = |id: u16| {
+            let lv = self.learn.level_up.get(&sp).into_iter().flatten().filter(|x| x.1 == id).map(|x| x.0).min();
+            match lv {
+                Some(lv) => format!("Lv {lv}"),
+                None if self.learn.machine.get(&sp).is_some_and(|m| m.contains(&id)) => "TM".into(),
+                None => String::new(),
+            }
+        };
+        let mut named: Vec<(u16, String, String)> = options.into_iter().map(|id| (id, self.mname(id), how(id))).collect();
         named.sort_by(|a, b| a.1.cmp(&b.1));
         let mut moves = self.team[i].moves.clone();
         moves.resize(4, 0);
+        let l = self.lang;
         egui::Grid::new(("moves", i)).num_columns(2).spacing([4.0, 4.0]).show(ui, |ui| {
             for (k, slot) in moves.iter_mut().enumerate() {
                 let label = if *slot == 0 { "–".to_string() } else { self.mname(*slot) };
-                egui::ComboBox::from_id_salt(("move", i, k)).width(118.0).selected_text(label).show_ui(ui, |ui| {
-                    ui.selectable_value(slot, 0, "–");
-                    for (id, name) in &named { ui.selectable_value(slot, *id, name); }
+                egui::ComboBox::from_id_salt(("move", i, k)).width(118.0).height(320.0).selected_text(label).show_ui(ui, |ui| {
+                    // Type to filter the list; Enter takes the first match.
+                    let qid = egui::Id::unique(("move_q", i, k));
+                    let before = *slot;
+                    let mut q: String = ui.data_mut(|d| d.get_temp(qid)).unwrap_or_default();
+                    let edit = ui.add(egui::TextEdit::singleline(&mut q).hint_text(t(l, "Search attack", "Attacke suchen")).desired_width(150.0));
+                    if !edit.has_focus() && q.is_empty() { edit.request_focus(); }
+                    let nq = crate::data::norm(&q);
+                    let hits: Vec<&(u16, String, String)> = named.iter().filter(|m| crate::data::norm(&m.1).contains(&nq)).collect();
+                    let enter = edit.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+                    if enter && let Some(m) = hits.first() { *slot = m.0; }
+                    if nq.is_empty() { ui.selectable_value(slot, 0, "–"); }
+                    for (id, name, how) in hits {
+                        let text = if how.is_empty() { name.clone() } else { format!("{name}  ({how})") };
+                        ui.selectable_value(slot, *id, text);
+                    }
+                    if enter { ui.close(); }
+                    if *slot != before { q.clear(); } // next time the menu opens with the full list
+                    ui.data_mut(|d| d.insert_temp(qid, q));
                 });
                 if k % 2 == 1 { ui.end_row(); }
             }
