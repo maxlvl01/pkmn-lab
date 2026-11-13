@@ -13,6 +13,10 @@ fn asset_name() -> String {
 }
 
 pub fn curl(args: &[&str]) -> Result<Vec<u8>, String> {
+    // Windows: the full System32 path, because a bare "curl" is looked up in the exe's own folder first.
+    #[cfg(windows)]
+    let mut cmd = Command::new(std::path::Path::new(&std::env::var_os("SystemRoot").unwrap_or_else(|| r"C:\Windows".into())).join(r"System32\curl.exe"));
+    #[cfg(not(windows))]
     let mut cmd = Command::new("curl");
     #[cfg(windows)]
     {
@@ -108,5 +112,10 @@ mod tests {
         use super::version;
         assert!(version("v0.10.0") > version("0.9.9"));
         assert!(version("0.1.0") <= version("v0.1.0"));
+    }
+
+    #[test]
+    fn curl_is_found() {
+        assert!(super::curl(&["--version"]).is_ok_and(|o| o.starts_with(b"curl")));
     }
 }

@@ -116,7 +116,10 @@ impl Sprites {
 mod tests {
     #[test]
     fn cached_png_loads() {
-        let dir = std::env::var("LOCALAPPDATA").unwrap() + "/pkmn-lab/sprites/versions-generation-iv-heartgold-soulsilver-74.png";
+        // Needs the Kleinstein sprite in the local cache (the app downloads it on first use); skipped otherwise.
+        let Ok(base) = std::env::var("LOCALAPPDATA") else { return };
+        let dir = base + "/pkmn-lab/sprites/versions-generation-iv-heartgold-soulsilver-74.png";
+        if !std::path::Path::new(&dir).exists() { return; }
         let ctx = eframe::egui::Context::default();
         egui_extras::install_image_loaders(&ctx);
         let uri = super::uri(std::path::Path::new(&dir));

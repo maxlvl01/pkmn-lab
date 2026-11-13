@@ -63,7 +63,7 @@ fn unrle(mut p: &[u8], size: usize) -> Result<Vec<u8>, String> {
             }
             0x80 => {
                 let (&v, r) = p.split_first().ok_or_else(bad)?;
-                let n = u16le(r, 0) as usize;
+                let n = u16le(r.get(..2).ok_or_else(bad)?, 0) as usize;
                 out.extend(std::iter::repeat_n(v, n));
                 p = &r[2..];
             }
@@ -480,6 +480,7 @@ mod tests {
     #[test]
     fn rle() {
         assert_eq!(unrle(&[2, 7, 8, 0x83, 9, 0x80, 1, 2, 0, 0], 7).unwrap(), vec![7, 8, 9, 9, 9, 1, 1]);
+        assert!(unrle(&[0x80, 5, 1], 3).is_err()); // cut off after a 0x80 run: an error, not a crash
     }
 
     /// Needs a real Gen 4 save; set PKMN_SAVE to its path, otherwise the test is skipped.

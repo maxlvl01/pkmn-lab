@@ -947,11 +947,11 @@ impl App {
                                 let place = self.rom.as_ref().and_then(|r| r.places.get(d.met_place as usize)).cloned()
                                     .unwrap_or_else(|| format!("{} #{}", t(l, "place", "Ort"), d.met_place));
                                 fact(ui, t(l, "Caught", "Gefangen"), if d.met_level == 0 { format!("{place} ({})", t(l, "hatched", "geschlüpft")) } else { format!("{place}, Lv {}", d.met_level) });
-                                let evo = self.learn.evolutions.get(&m.species).and_then(|v| v.iter().find_map(|&(to, h)| match h { EvoHow::Friendship(w) => Some((to, w)), _ => None }));
-                                let f = match evo {
-                                    Some((to, w)) => format!("{} / 255 · {} {}", d.friendship, self.sname(to), self.friendship_progress(d.friendship, w, gn)),
-                                    None => format!("{} / 255", d.friendship),
-                                };
+                                // Evoli has two (Psiana by day, Nachtara at night), so list them all.
+                                let mut f = format!("{} / 255", d.friendship);
+                                for &(to, h) in self.learn.evolutions.get(&m.species).into_iter().flatten() {
+                                    if let EvoHow::Friendship(w) = h { f += &format!(" · {} {}", self.sname(to), self.friendship_progress(d.friendship, w, gn)); }
+                                }
                                 fact(ui, t(l, "Friendship", "Freundschaft"), f);
                                 ui.end_row();
                             });
