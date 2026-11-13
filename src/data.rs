@@ -364,6 +364,8 @@ pub struct Learnsets {
     pub machine_no: HashMap<u16, u16>,
     /// species -> what it can evolve into, and how
     pub evolutions: HashMap<u16, Vec<(u16, EvoHow)>>,
+    /// species in this game's own Pokédex (empty = unknown)
+    pub regional: std::collections::HashSet<u16>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -424,6 +426,13 @@ impl Dex {
             let list = ls.evolutions.entry(pre).or_default();
             if !list.iter().any(|e| e.0 == to) { list.push((to, how)); }
         }
+        // Regional Pokédex: all dexes PokeAPI links to this version group (X/Y has three Kalos parts, etc.).
+        let dexes: Vec<&str> = scan(csv_file!("pokedex_version_groups"), &["pokedex_id", "version_group_id"])
+            .filter(|f| f[1] == vg_id).map(|f| f[0]).collect();
+        ls.regional = scan(csv_file!("pokemon_dex_numbers"), &["species_id", "pokedex_id"])
+            .filter(|f| dexes.contains(&f[1]))
+            .filter_map(|f| f[0].parse().ok())
+            .collect();
         ls
     }
 }

@@ -19,6 +19,8 @@ pub struct Game<'a> {
     pub learn: &'a Learnsets,
     /// TM/HM moves the player owns (from the save); None = unknown.
     pub owned_machines: Option<&'a HashSet<u16>>,
+    /// Catch tips only from the game's own (regional) Pokédex.
+    pub regional: bool,
 }
 
 // ---------------- report data ----------------
@@ -31,7 +33,12 @@ pub struct Report {
     pub worst_uncountered: Option<u8>,
     pub also_countered: Vec<u8>,
     pub offense: Vec<OffRow>,
+    /// rating: blend of today's team and its potential (evolved, at the last boss's level, best moves)
     pub summary: Summary,
+    pub rating_now: u32,
+    pub potential: u32,
+    /// level the potential is measured at
+    pub potential_level: u8,
     pub projection: Projection,
     pub catch: Vec<CatchRec>,
     pub bosses: Vec<BossView>,
@@ -273,8 +280,11 @@ pub fn analyse(dex: &Dex, game: &Game, team: &[Mon], focus: Option<usize>) -> Re
         hitters: fighters.iter().filter(|f| best_hit(dex, f, &[d], gn).0 >= 2.0).count(),
     }).collect();
 
-    let summary = summarize(dex, &fighters, gn);
+    let now = summarize(dex, &fighters, gn);
     let ahead = remaining(game);
+    // Future potential: the team as it can be by the last boss ahead (evolved, its best moves by then).
+    let later = project(dex, game, team, &ahead, ahead.last().copied());
+    let summary = Summary { rating: (now.rating as f32 * 0.6 + later.rating_after as f32 * 0.4).round() as u32, ..now };
     Report {
         members,
         defense,
@@ -283,17 +293,21 @@ pub fn analyse(dex: &Dex, game: &Game, team: &[Mon], focus: Option<usize>) -> Re
         also_countered,
         offense,
         summary,
+        rating_now: now.rating,
+        potential: later.rating_after,
+        potential_level: later.target,
         projection: project(dex, game, team, &ahead, focus),
-        catch: recommend(dex, gn, &fighters),
+        catch: recommend(dex, gn, &fighters, (game.regional && !game.learn.regional.is_empty()).then_some(&game.learn.regional)),
         bosses: bosses(dex, game, team, &ahead),
     }
 }
 
 /// Try every typing that exists in this gen as a new member (or as a swap if the team is full).
-fn recommend(dex: &Dex, gn: u8, fighters: &[Fighter]) -> Vec<CatchRec> {
+/// `pool`: only these species (the game's regional Pokédex); typings nobody in it has are not suggested.
+fn recommend(dex: &Dex, gn: u8, fighters: &[Fighter], pool: Option<&HashSet<u16>>) -> Vec<CatchRec> {
     let base = summarize(dex, fighters, gn).rating as i32;
     let mut typings: BTreeMap<Vec<u8>, Vec<u16>> = BTreeMap::new();
-    for s in dex.species.values().filter(|s| s.gn <= gn) {
+    for s in dex.species.values().filter(|s| s.gn <= gn && pool.is_none_or(|p| p.contains(&s.id))) {
         let mut ts = dex.species_types(s, gn);
         ts.sort();
         typings.entry(ts).or_default().push(s.id);
@@ -553,7 +567,7 @@ mod tests {
         let vg = dex.vg("heartgold-soulsilver").unwrap();
         let learn = dex.learnsets(vg);
         let bosses = dex.bosses.iter().find(|g| g.id == vg.ident).unwrap().bosses.clone();
-        let game = Game { vg, bosses: &bosses, badges: &[], learn: &learn, owned_machines: None };
+        let game = Game { vg, bosses: &bosses, badges: &[], learn: &learn, owned_machines: None, regional: false };
         let aqua = dex.find_move("Aquaknarre").unwrap().id;
         let tackle = dex.find_move("Tackle").unwrap().id;
         let team = vec![

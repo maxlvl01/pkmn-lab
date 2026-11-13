@@ -19,6 +19,11 @@ struct Saved {
     game_id: String,
     badges: Vec<bool>,
     team: Vec<Mon>,
+    #[serde(default)]
+    national_dex: bool,
+    /// UI scale; 0 = pick from the monitor size on first start
+    #[serde(default)]
+    zoom: f32,
 }
 
 struct RomData {
@@ -48,6 +53,9 @@ pub struct App {
     tab: Tab,
     /// boss the projection is made for; None = the next one
     proj_focus: Option<usize>,
+    /// Fangen tab: whole national Pokédex instead of the game's own
+    national_dex: bool,
+    zoom: f32,
     message: Option<(bool, String)>, // (is_error, text)
     search: Vec<String>,
     update_status: Arc<Mutex<Option<String>>>,
@@ -178,6 +186,8 @@ impl App {
             dirty: true,
             tab: Tab::Team,
             proj_focus: None,
+            national_dex: saved.national_dex,
+            zoom: saved.zoom,
             message: None,
             search: vec![],
             update_status: Arc::new(Mutex::new(None)),
@@ -278,7 +288,7 @@ impl App {
         let owned: Option<HashSet<u16>> = self.owned_tms.as_ref().map(|ns| {
             self.learn.machine_no.iter().filter(|(_, n)| ns.contains(n)).map(|(&mv, _)| mv).collect()
         });
-        let game = Game { vg, bosses: &self.bosses, badges: &self.badges, learn: &self.learn, owned_machines: owned.as_ref() };
+        let game = Game { vg, bosses: &self.bosses, badges: &self.badges, learn: &self.learn, owned_machines: owned.as_ref(), regional: !self.national_dex };
         self.report = Some(analysis::analyse(&self.dex, &game, &self.team, self.proj_focus));
     }
 }
@@ -530,12 +540,15 @@ impl App {
     fn header(&self, ui: &mut Ui, r: &Report) {
         let l = self.lang;
         card(ui, |ui| {
+            ui.set_width(ui.available_width() - 28.0);
             ui.horizontal(|ui| {
                 rating_ring(ui, r.summary.rating, 92.0);
                 ui.add_space(8.0);
                 ui.vertical(|ui| {
                     ui.label(RichText::new(t(l, "Team rating", "Team-Bewertung")).size(18.0).strong());
-                    ui.label(RichText::new(format!("{} {}/100", t(l, "with projected attacks:", "mit projizierten Attacken:"), r.projection.rating_after)).color(MUTED));
+                    ui.label(RichText::new(format!("{} {}  ·  {} {} (Lv {})", t(l, "Now", "Jetzt"), r.rating_now, t(l, "Potential", "Potenzial"), r.potential, r.potential_level)).color(MUTED))
+                        .on_hover_text(t(l, "Rating = 60 % today's team + 40 % its potential: evolved, at the level of the last boss ahead, with its best moves by then.",
+                            "Bewertung = 60 % heutiges Team + 40 % Potenzial: entwickelt, auf dem Level des letzten Bosses, mit den besten Attacken bis dahin."));
                     ui.add(egui::ProgressBar::new(r.summary.offense_pct as f32 / 100.0).desired_width(230.0).fill(bar_color(r.summary.offense_pct))
                         .text(format!("{} {}%", t(l, "Offensive coverage", "Angriffs-Abdeckung"), r.summary.offense_pct)));
                     ui.add(egui::ProgressBar::new(r.summary.defense_pct as f32 / 100.0).desired_width(230.0).fill(bar_color(r.summary.defense_pct))
@@ -565,6 +578,11 @@ impl App {
                         });
                     }
                 });
+                if ui.available_width() > 6.0 * 64.0 {
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        for m in self.team.iter().rev() { self.species_sprite(ui, m.species, 64.0); }
+                    });
+                }
             });
         });
     }
@@ -613,8 +631,23 @@ impl App {
     }
 
     fn tab_defense(&self, ui: &mut Ui, r: &Report) {
+        if ui.available_width() > 1150.0 {
+            ui.horizontal_top(|ui| {
+                self.defense_table(ui, r);
+                ui.add_space(8.0);
+                self.defense_summary(ui, r, 380.0);
+            });
+        } else {
+            self.defense_summary(ui, r, 0.0);
+            ui.add_space(8.0);
+            self.defense_table(ui, r);
+        }
+    }
+
+    fn defense_summary(&self, ui: &mut Ui, r: &Report, width: f32) {
         let l = self.lang;
         card(ui, |ui| {
+            if width > 0.0 { ui.set_width(width); }
             if let Some(w) = r.worst {
                 let row = r.defense.iter().find(|d| d.atk == w).unwrap();
                 ui.horizontal(|ui| {
@@ -639,7 +672,10 @@ impl App {
                 });
             }
         });
-        ui.add_space(8.0);
+    }
+
+    fn defense_table(&self, ui: &mut Ui, r: &Report) {
+        let l = self.lang;
         card(ui, |ui| {
             ui.label(RichText::new(t(l, "How each attack type hits your team", "Wie jeder Angriffstyp dein Team trifft")).strong());
             egui::Grid::new("def").spacing([6.0, 4.0]).show(ui, |ui| {
@@ -708,7 +744,7 @@ impl App {
                 Some(_) => t(l, "TMs/HMs in your bag are included; TM ideas are ones you don't have yet.",
                     "TMs/VMs aus deinem Beutel zählen mit; TM-Ideen sind welche, die du noch nicht hast."),
             }).color(MUTED));
-            ui.label(format!("{}: {} » {}/100", t(l, "Team rating", "Team-Bewertung"), r.summary.rating, p.rating_after));
+            ui.label(format!("{}: {} » {}/100", t(l, "Team rating", "Team-Bewertung"), r.rating_now, p.rating_after));
         });
         ui.add_space(8.0);
         let items: Vec<_> = self.team.iter().zip(&p.members).collect();
@@ -773,16 +809,39 @@ impl App {
         });
     }
 
-    fn tab_catch(&self, ui: &mut Ui, r: &Report) {
+    fn tab_catch(&mut self, ui: &mut Ui, r: &Report) {
         let l = self.lang;
+        ui.horizontal(|ui| {
+            ui.label(RichText::new(t(l, "Pokémon from", "Pokémon aus")).color(MUTED));
+            let has_regional = !self.learn.regional.is_empty();
+            for (national, en, de) in [(false, "this game's Pokédex", "dem Pokédex dieses Spiels"), (true, "the national Pokédex", "dem Nationalen Pokédex")] {
+                if national == false && !has_regional { continue; }
+                let on = self.national_dex == national || (!has_regional && national);
+                let b = egui::Button::new(RichText::new(t(l, en, de)).color(if on { Color32::WHITE } else { MUTED }))
+                    .fill(if on { ACCENT } else { CARD }).corner_radius(CornerRadius::same(8));
+                if ui.add(b).clicked() && self.national_dex != national {
+                    self.national_dex = national;
+                    self.dirty = true;
+                }
+            }
+        });
+        ui.add_space(4.0);
         if r.catch.is_empty() {
             card(ui, |ui| ui.label(t(l, "No single typing improves the team; work on moves and levels.", "Kein Typ verbessert das Team; arbeite an Attacken und Leveln.")));
             return;
         }
-        ui.label(RichText::new(t(l, "Examples come from the whole Pokédex up to this generation; check what you can catch in your game.",
-            "Beispiele aus dem ganzen Pokédex bis zu dieser Generation; prüf, was in deinem Spiel fangbar ist.")).color(MUTED));
-        for c in &r.catch {
+        let note = if self.national_dex || self.learn.regional.is_empty() {
+            t(l, "Examples come from every Pokémon up to this generation; not all of them can be caught in your game.",
+                "Beispiele aus allen Pokémon bis zu dieser Generation; nicht alle sind in deinem Spiel fangbar.")
+        } else {
+            t(l, "Only Pokémon from this game's own Pokédex (including ones you get by evolving). A ROM hack may place others.",
+                "Nur Pokémon aus dem Pokédex dieses Spiels (auch solche, die man durch Entwicklung bekommt). Ein ROM-Hack kann andere verteilen.")
+        };
+        ui.label(RichText::new(note).color(MUTED));
+        let items: Vec<_> = r.catch.iter().collect();
+        card_rows(ui, &items, 540.0, |ui, &c| {
             card(ui, |ui| {
+                ui.set_width(540.0);
                 ui.horizontal(|ui| {
                     ui.label(RichText::new(format!("+{}", c.gain)).size(26.0).strong().color(GOOD));
                     ui.add_space(6.0);
@@ -801,8 +860,7 @@ impl App {
                     }
                 });
             });
-            ui.add_space(6.0);
-        }
+        });
     }
 
     fn tab_bosses(&self, ui: &mut Ui, r: &Report) {
@@ -812,9 +870,11 @@ impl App {
             return;
         }
         let our_max = self.team.iter().map(|m| m.level).max().unwrap_or(1);
-        for (k, bv) in r.bosses.iter().enumerate() {
+        let items: Vec<_> = r.bosses.iter().enumerate().collect();
+        card_rows(ui, &items, 540.0, |ui, &(k, bv)| {
             let b = &self.bosses[bv.boss];
             card(ui, |ui| {
+                ui.set_width(540.0);
                 ui.horizontal(|ui| {
                     sprite(ui, self.sprites.trainer(&b.name_en, &self.game_id), 72.0);
                     ui.vertical(|ui| {
@@ -871,8 +931,7 @@ impl App {
                     });
                 });
             });
-            ui.add_space(6.0);
-        }
+        });
     }
 }
 
@@ -895,6 +954,17 @@ impl eframe::App for App {
         }
         if self.dirty { self.recompute(); }
         let l = self.lang;
+        // Text size: big monitors start larger; Ctrl +/- and the A buttons change it, and it is remembered.
+        if self.zoom == 0.0 {
+            if let Some(m) = ctx.input(|i| i.viewport().monitor_size) {
+                self.zoom = ((m.x / 1600.0).clamp(1.0, 1.6) * 10.0).round() / 10.0;
+                ctx.set_zoom_factor(self.zoom);
+            }
+        } else if (ctx.zoom_factor() - self.zoom).abs() > 0.001 && ctx.cumulative_frame_nr() < 2 {
+            ctx.set_zoom_factor(self.zoom);
+        } else {
+            self.zoom = ctx.zoom_factor();
+        }
 
         egui::Panel::top("top").frame(egui::Frame::new().fill(BAR).inner_margin(egui::Margin::symmetric(14, 8))).show(ui, |ui| {
             ui.horizontal(|ui| {
@@ -908,6 +978,10 @@ impl eframe::App for App {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if ui.selectable_label(l == Lang::En, "EN").clicked() { self.lang = Lang::En; }
                     if ui.selectable_label(l == Lang::De, "DE").clicked() { self.lang = Lang::De; }
+                    ui.add_space(10.0);
+                    let tip = t(l, "Text size (also Ctrl + / Ctrl -)", "Textgröße (auch Strg + / Strg -)");
+                    if ui.button("A+").on_hover_text(tip).clicked() { ctx.set_zoom_factor((ctx.zoom_factor() + 0.1).min(2.5)); }
+                    if ui.button("A−").on_hover_text(tip).clicked() { ctx.set_zoom_factor((ctx.zoom_factor() - 0.1).max(0.7)); }
                     ui.add_space(10.0);
                     if ui.button(t(l, "Check for updates", "Nach Updates suchen")).clicked() { self.start_update_check(true); }
                     if let Some(s) = self.update_status.lock().unwrap().clone() { ui.label(RichText::new(s).color(OKAY)); }
@@ -978,6 +1052,8 @@ impl eframe::App for App {
             game_id: self.game_id.clone(),
             badges: self.badges.clone(),
             team: self.team.clone(),
+            national_dex: self.national_dex,
+            zoom: self.zoom,
         };
         eframe::set_value(storage, eframe::APP_KEY, &saved);
     }
