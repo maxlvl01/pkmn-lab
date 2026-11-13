@@ -450,11 +450,17 @@ pub enum CatchHow { Grass, Surf, RockSmash, Rod }
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum EvoHow {
     Level(u8),
-    Friendship,
+    Friendship(Daytime),
     Item,
     Trade,
     Other,
 }
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Daytime { Any, Day, Night }
+
+/// Friendship a Pokémon needs to evolve by friendship (Gens 2-7: 220, from Gen 8 on: 160).
+pub fn friendship_needed(gn: u8) -> u8 { if gn >= 8 { 160 } else { 220 } }
 
 /// Minimal CSV scan for the big learnset file (the generic `rows` is too slow for ~600k lines).
 fn scan<'a>(text: &'a str, cols: &[&str]) -> impl Iterator<Item = Vec<&'a str>> + 'a {
@@ -488,7 +494,7 @@ impl Dex {
         let from: HashMap<u16, u16> = scan(csv_file!("pokemon_species"), &["id", "evolves_from_species_id"])
             .filter_map(|f| Some((f[0].parse().ok()?, f[1].parse().ok()?)))
             .collect();
-        let cols = ["evolved_species_id", "evolution_trigger_id", "minimum_level", "required_pokemon_form_id"];
+        let cols = ["evolved_species_id", "evolution_trigger_id", "minimum_level", "required_pokemon_form_id", "minimum_happiness", "time_of_day"];
         for f in scan(csv_file!("pokemon_evolution"), &cols) {
             // Regional forms (form ids 10000+) evolve differently; the plain species is what older games have.
             if f[3].parse::<u32>().is_ok_and(|x| x >= 10000) { continue; }
@@ -497,7 +503,7 @@ impl Dex {
             if self.species.get(&to).is_none_or(|s| s.gn > vg.gn) { continue; }
             let how = match (f[1], f[2].parse::<u8>()) {
                 ("1", Ok(l)) => EvoHow::Level(l),
-                ("1", _) => EvoHow::Friendship, // shortcut: level-up without a level is mostly friendship; also time/place ones
+                ("1", _) if !f[4].is_empty() => EvoHow::Friendship(match f[5] { "day" => Daytime::Day, "night" => Daytime::Night, _ => Daytime::Any }),
                 ("2", _) => EvoHow::Trade,
                 ("3", _) => EvoHow::Item,
                 _ => EvoHow::Other,

@@ -788,6 +788,11 @@ mod tests {
         assert!(ls.level_up[&74].contains(&(11, 88))); // Kleinstein: Steinwurf at 11
         assert_eq!(ls.machine_no[&317], 39); // TM39 Felsgrab
         assert_eq!(ls.machine_no[&15], 101); // HM01 Zerschneider
+        use crate::data::{Daytime, EvoHow};
+        // Evoli: Psiana by day, Nachtara at night; Zubat line: Iksbat by friendship
+        assert!(ls.evolutions[&133].contains(&(196, EvoHow::Friendship(Daytime::Day))));
+        assert!(ls.evolutions[&133].contains(&(197, EvoHow::Friendship(Daytime::Night))));
+        assert!(ls.evolutions[&42].contains(&(169, EvoHow::Friendship(Daytime::Any))));
         // Bite was Normal in Gen 1 and Dark from Gen 2.
         let bite = dex.find_move("bite").unwrap();
         assert_eq!(dex.move_stats(bite, dex.vg("red-blue").unwrap()).0, 1);

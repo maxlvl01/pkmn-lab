@@ -1,6 +1,6 @@
 //! The app window (egui). Everything the user sees lives here; maths is in analysis.rs.
 use crate::analysis::{self, Game, Mon, Report, Source, Verdict};
-use crate::data::{Boss, Dex, EvoHow, Lang, Learnsets};
+use crate::data::{Boss, Daytime, Dex, EvoHow, Lang, Learnsets};
 use crate::sprites::Sprites;
 use crate::{rom, save, update};
 use eframe::egui::{self, Color32, CornerRadius, RichText, Stroke, Ui, Vec2};
@@ -77,6 +77,10 @@ pub struct App {
     search: Vec<String>,
     update_status: Arc<Mutex<Option<String>>>,
     sprites: Sprites,
+}
+
+fn daytime(w: Daytime, l: Lang) -> &'static str {
+    match w { Daytime::Any => "", Daytime::Day => t(l, " (by day)", " (tagsüber)"), Daytime::Night => t(l, " (at night)", " (nachts)") }
 }
 
 fn t(lang: Lang, en: &'static str, de: &'static str) -> &'static str {
@@ -943,7 +947,12 @@ impl App {
                                 let place = self.rom.as_ref().and_then(|r| r.places.get(d.met_place as usize)).cloned()
                                     .unwrap_or_else(|| format!("{} #{}", t(l, "place", "Ort"), d.met_place));
                                 fact(ui, t(l, "Caught", "Gefangen"), if d.met_level == 0 { format!("{place} ({})", t(l, "hatched", "geschlüpft")) } else { format!("{place}, Lv {}", d.met_level) });
-                                fact(ui, t(l, "Friendship", "Freundschaft"), format!("{} / 255", d.friendship));
+                                let evo = self.learn.evolutions.get(&m.species).and_then(|v| v.iter().find_map(|&(to, h)| match h { EvoHow::Friendship(w) => Some((to, w)), _ => None }));
+                                let f = match evo {
+                                    Some((to, w)) => format!("{} / 255 · {} {}", d.friendship, self.sname(to), self.friendship_progress(d.friendship, w, gn)),
+                                    None => format!("{} / 255", d.friendship),
+                                };
+                                fact(ui, t(l, "Friendship", "Freundschaft"), f);
                                 ui.end_row();
                             });
                             // HP and EXP bars
@@ -1274,10 +1283,13 @@ impl App {
                 }
                 for &(to, how) in &g.could {
                     let how = match how {
-                        EvoHow::Trade => t(l, "by trade", "durch Tausch"),
-                        EvoHow::Item => t(l, "with an item", "mit Item"),
-                        EvoHow::Friendship => t(l, "with friendship", "durch Freundschaft"),
-                        _ => t(l, "special condition", "besondere Bedingung"),
+                        EvoHow::Trade => t(l, "by trade", "durch Tausch").to_string(),
+                        EvoHow::Item => t(l, "with an item", "mit Item").to_string(),
+                        EvoHow::Friendship(w) => match &m.details {
+                            Some(d) => format!("{} {}", t(l, "friendship", "Freundschaft"), self.friendship_progress(d.friendship, w, vg.gn)),
+                            None => format!("{} {}", t(l, "with friendship", "durch Freundschaft"), daytime(w, l)),
+                        },
+                        _ => t(l, "special condition", "besondere Bedingung").to_string(),
                     };
                     ui.colored_label(OKAY, format!("{} {} ({how})", t(l, "Could become", "Kann werden:"), self.sname(to)));
                 }
@@ -1509,6 +1521,15 @@ impl App {
             else if w.badges > self.badge_count() { format!(" – {} {} {}", t(l, "from", "ab"), w.badges, t(l, "badges", "Orden")) }
             else { t(l, " – reachable now", " – schon erreichbar").to_string() };
         format!("{} {} {} {} ({}, {} Lv {}){evolve}{when}", t(l, "Catch", "Fange"), self.sname(src), t(l, "at", "bei"), w.place, how, t(l, "from", "ab"), w.level)
+    }
+
+    /// "180/220" or "ready, next level-up", plus day/night when it matters.
+    fn friendship_progress(&self, now: u8, when: Daytime, gn: u8) -> String {
+        let l = self.lang;
+        let need = crate::data::friendship_needed(gn);
+        let state = if now >= need { t(l, "ready: evolves at the next level-up", "bereit: entwickelt sich beim nächsten Level-Up").to_string() }
+            else { format!("{now}/{need}, {} {}", t(l, "missing", "fehlen"), need - now) };
+        format!("{state}{}", daytime(when, l))
     }
 
     fn badge_count(&self) -> u8 {

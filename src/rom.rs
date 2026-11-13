@@ -1,6 +1,6 @@
 //! Read real boss teams from a HeartGold/SoulSilver ROM (works for ROM hacks too).
 //! Layout: research/save-formats.md part D (verified on Max's SoulSilver hard mod).
-use crate::data::{CatchHow, EvoHow, WildSpot};
+use crate::data::{CatchHow, Daytime, EvoHow, WildSpot};
 use std::collections::{HashMap, HashSet};
 use crate::data::{norm, Boss, BossMon, Dex};
 
@@ -241,7 +241,10 @@ pub fn hgss_evolutions(rom: &[u8]) -> Option<std::collections::HashMap<u16, Vec<
             if method == 0 || to == 0 || to > 493 { return None; }
             let how = match method {
                 4 | 8..=14 | 22 | 23 => EvoHow::Level(param.min(100) as u8),
-                1..=3 => EvoHow::Friendship,
+                // EVO_FRIENDSHIP, _DAY, _NIGHT
+                1 => EvoHow::Friendship(Daytime::Any),
+                2 => EvoHow::Friendship(Daytime::Day),
+                3 => EvoHow::Friendship(Daytime::Night),
                 6 | 7 | 16..=19 => EvoHow::Item,
                 5 => EvoHow::Trade,
                 _ => EvoHow::Other,
