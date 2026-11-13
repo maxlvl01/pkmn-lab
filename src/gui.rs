@@ -302,10 +302,19 @@ impl App {
 
     /// Bosses and learnsets for the current game; a loaded HGSS ROM overrides the built-in data.
     fn ensure_game_data(&mut self) {
-        let key = format!("{}|{}", self.game_id, self.rom_path.as_deref().unwrap_or(""));
+        let mmo = self.game_id.starts_with(crate::data::POKEMMO) && crate::pokemmo::ready();
+        let key = format!("{}|{}{}", self.game_id, self.rom_path.as_deref().unwrap_or(""), if mmo { "|mmo" } else { "" });
         if key == self.data_key { return; }
         let vg = self.dex.vg(&self.game_id).expect("valid game id");
         self.learn = self.dex.learnsets(vg);
+        let mut key = key;
+        if mmo {
+            match crate::pokemmo::learnsets() {
+                Some((lv, tm)) => { self.learn.level_up = lv; self.learn.machine = tm; }
+                // Unreadable (damaged) file: stay on B2W2 and drop it, so it is downloaded again.
+                None => { crate::pokemmo::forget(); key.truncate(key.len() - 4); }
+            }
+        }
         self.bosses = self.dex.bosses.iter().find(|g| g.id == self.game_id).map(|g| g.bosses.clone()).unwrap_or_default();
         self.trainers.clear();
         if let (true, Some(r)) = (self.game_id == "heartgold-soulsilver", &self.rom) {
@@ -476,8 +485,15 @@ impl App {
                 ui.label(RichText::new(t(l, "Set by your save / ROM", "Vom Spielstand / der ROM festgelegt")).color(MUTED).small());
             }
             if self.game_id.starts_with(crate::data::POKEMMO) {
-                ui.label(RichText::new(t(l, "Gen 5 rules and learnsets; boss teams from the original games, PokeMMO's own may differ. No save to load: enter your team by hand.",
-                    "Regeln und Attacken wie Gen 5; Boss-Teams aus den Originalspielen, bei PokeMMO können sie abweichen. Kein Spielstand zum Laden: Team von Hand eingeben.")).color(MUTED).small());
+                let moves = if self.data_key.ends_with("|mmo") {
+                    t(l, "Attacks: PokeMMO's own learnsets (PokeMMO Hub data).", "Attacken: PokeMMOs eigene Lernlisten (Daten vom PokeMMO Hub).")
+                } else {
+                    t(l, "Attacks: Black 2/White 2 until PokeMMO's learnsets are downloaded (needs internet).",
+                        "Attacken: wie Schwarz 2/Weiß 2, bis PokeMMOs Lernlisten geladen sind (braucht Internet).")
+                };
+                ui.label(RichText::new(t(l, "Gen 5 rules; boss teams from the original games, PokeMMO's own may differ. No save to load: enter your team by hand.",
+                    "Regeln wie Gen 5; Boss-Teams aus den Originalspielen, bei PokeMMO können sie abweichen. Kein Spielstand zum Laden: Team von Hand eingeben.")).color(MUTED).small());
+                ui.label(RichText::new(moves).color(MUTED).small());
             }
             if chosen != self.game_id {
                 self.game_id = chosen;
@@ -1668,6 +1684,10 @@ impl eframe::App for App {
         for f in ctx.input(|i| i.raw.dropped_files.clone()) {
             let p = f.path().to_string_lossy().into_owned();
             if p.to_lowercase().ends_with(".nds") { self.load_rom(&p) } else { self.load_save(&p) }
+        }
+        if self.game_id.starts_with(crate::data::POKEMMO) {
+            if !crate::pokemmo::ready() { crate::pokemmo::fetch(ctx.clone()); }
+            else if !self.data_key.ends_with("|mmo") { self.dirty = true; } // download just finished
         }
         if self.dirty { self.recompute(); }
         let l = self.lang;

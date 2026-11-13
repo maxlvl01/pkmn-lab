@@ -6,6 +6,7 @@ mod data;
 mod gui;
 mod rom;
 mod save;
+mod pokemmo;
 mod sprites;
 mod update;
 
