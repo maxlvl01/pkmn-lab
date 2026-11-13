@@ -30,6 +30,7 @@ fn folder(game_id: &str) -> String {
         "diamond-pearl" | "platinum" | "heartgold-soulsilver" => format!("versions/generation-iv/{game_id}/"),
         "black-white" | "black-2-white-2" => "versions/generation-v/black-white/".into(),
         "x-y" | "omega-ruby-alpha-sapphire" => format!("versions/generation-vi/{game_id}/"),
+        g if g.starts_with("pokemmo") => "versions/generation-v/black-white/".into(),
         _ => "other/home/".into(),
     }
 }

@@ -874,4 +874,24 @@ mod tests {
         assert!(lopsided < 0.4, "{lopsided}");
         assert!(level_balance(&[mon(13), mon(11), mon(10), mon(8), mon(7)]) > 0.75);
     }
+
+    #[test]
+    fn pokemmo_regions() {
+        let dex = Dex::load();
+        let kanto = dex.vg("pokemmo-kanto").unwrap();
+        assert_eq!((kanto.gn, kanto.name_de.as_str()), (5, "PokeMMO – Kanto"));
+        assert_eq!(dex.vg("pokemmo-unova").unwrap().name_de, "PokeMMO – Einall");
+        let count = |id: &str| dex.bosses.iter().find(|g| g.id == id).unwrap().bosses.len();
+        assert_eq!(count("pokemmo-johto"), 13); // Johto league only, Kanto is its own region
+        assert_eq!(count("pokemmo-kanto"), count("firered-leafgreen"));
+        // All five regions in the Pokédex: Zoroark (Gen 5) yes, Igamaro (Gen 6) no.
+        let learn = dex.learnsets(kanto);
+        assert!(learn.regional.contains(&571) && !learn.regional.contains(&650));
+        assert!(!learn.level_up.is_empty());
+        // A full analysis runs on a Kanto boss list with Gen 5 rules.
+        let bosses = dex.bosses.iter().find(|g| g.id == kanto.ident).unwrap().bosses.clone();
+        let game = Game { vg: kanto, bosses: &bosses, badges: &[], learn: &learn, owned_machines: None, regional: true, trainers: &[], beaten: None };
+        let team = [Mon { species: 571, level: 30, moves: vec![], nickname: None, details: None }];
+        assert!(!analyse(&dex, &game, &team, None).bosses.is_empty());
+    }
 }

@@ -52,6 +52,7 @@ pub struct TypeInfo {
     pub name_de: String,
 }
 
+#[derive(Clone)]
 pub struct VersionGroup {
     pub id: u16,
     /// e.g. ("HeartGold / SoulSilver", "HeartGold / SoulSilver")
@@ -163,6 +164,13 @@ pub fn exp_at(growth: u8, level: u8) -> u32 {
     if level <= 1 { 0 } else { v.max(0) as u32 }
 }
 
+pub const POKEMMO: &str = "pokemmo";
+/// (region, German name, game whose bosses it uses, how many of them) in PokeMMO's game list.
+const POKEMMO_REGIONS: &[(&str, &str, &str, usize)] = &[
+    ("Kanto", "Kanto", "firered-leafgreen", 99), ("Johto", "Johto", "heartgold-soulsilver", 13),
+    ("Hoenn", "Hoenn", "emerald", 99), ("Sinnoh", "Sinnoh", "platinum", 99), ("Unova", "Einall", "black-white", 99),
+];
+
 impl Dex {
     pub fn load() -> Dex {
         let mut names: HashMap<(u16, u16), String> = HashMap::new();
@@ -256,7 +264,7 @@ impl Dex {
                 .filter_map(|v| version_names.get(&(*v, lang)).or(version_names.get(&(*v, LANG_EN))))
                 .cloned().collect::<Vec<_>>().join(" / ")
         };
-        let version_groups: Vec<VersionGroup> = rows(csv_file!("version_groups"))
+        let mut version_groups: Vec<VersionGroup> = rows(csv_file!("version_groups"))
             .map(|r| VersionGroup {
                 id: num(&r, "id").unwrap(),
                 name_en: vg_name(num(&r, "id").unwrap(), LANG_EN),
@@ -266,6 +274,16 @@ impl Dex {
                 order: num(&r, "order").unwrap(),
             })
             .collect();
+        // PokeMMO is not in PokeAPI. It runs on the Gen 3-5 ROMs with Gen 5 battles, so each region borrows
+        // Black 2 / White 2's id (learnsets, TMs, move changes) under its own name.
+        if let Some(b2w2) = version_groups.iter().find(|v| v.ident == "black-2-white-2").cloned() {
+            for &(region, de, _, _) in POKEMMO_REGIONS {
+                version_groups.push(VersionGroup {
+                    name_en: format!("PokeMMO – {region}"), name_de: format!("PokeMMO – {de}"),
+                    ident: format!("{POKEMMO}-{}", region.to_lowercase()), ..b2w2.clone()
+                });
+            }
+        }
         let vg_order: HashMap<u16, u16> = version_groups.iter().map(|v| (v.id, v.order)).collect();
 
         let mut move_names: HashMap<(u16, u16), String> = HashMap::new();
@@ -309,6 +327,14 @@ impl Dex {
         for text in [include_str!("../data/bosses/gen1-4.json"), include_str!("../data/bosses/gen5-9.json")] {
             let f: BossFile = serde_json::from_str(text).expect("boss json");
             bosses.extend(f.games);
+        }
+        // shortcut: PokeMMO regions use the original games' boss teams (no PokeMMO team data found); the
+        // first-time fights may differ there. Johto keeps only its own league (Kanto is a region of its own).
+        for &(region, _, from, take) in POKEMMO_REGIONS {
+            if let Some(g) = bosses.iter().find(|g| g.id == from) {
+                let list = g.bosses.iter().take(take).cloned().collect();
+                bosses.push(GameBosses { id: format!("{POKEMMO}-{}", region.to_lowercase()), bosses: list });
+            }
         }
 
         let mut abilities: HashMap<u16, (String, String)> = HashMap::new();
@@ -512,10 +538,13 @@ impl Dex {
             if !list.iter().any(|e| e.0 == to) { list.push((to, how)); }
         }
         // Regional Pokédex: all dexes PokeAPI links to this version group (X/Y has three Kalos parts, etc.).
-        let dexes: Vec<&str> = scan(csv_file!("pokedex_version_groups"), &["pokedex_id", "version_group_id"])
-            .filter(|f| f[1] == vg_id).map(|f| f[0]).collect();
+        // PokeMMO has all five regions, so its "regional" dex is the national one up to Gen 5.
+        let dexes: Vec<&str> = if vg.ident.starts_with(POKEMMO) { vec!["1"] } else {
+            scan(csv_file!("pokedex_version_groups"), &["pokedex_id", "version_group_id"]).filter(|f| f[1] == vg_id).map(|f| f[0]).collect()
+        };
         for f in scan(csv_file!("pokemon_dex_numbers"), &["species_id", "pokedex_id", "pokedex_number"]).filter(|f| dexes.contains(&f[1])) {
             if let (Ok(sp), Ok(no)) = (f[0].parse::<u16>(), f[2].parse::<u16>()) {
+                if self.species.get(&sp).is_none_or(|s| s.gn > vg.gn) { continue; }
                 let e = ls.regional_no.entry(sp).or_insert(no);
                 *e = (*e).min(no);
             }

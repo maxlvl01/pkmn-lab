@@ -475,6 +475,10 @@ impl App {
             if locked {
                 ui.label(RichText::new(t(l, "Set by your save / ROM", "Vom Spielstand / der ROM festgelegt")).color(MUTED).small());
             }
+            if self.game_id.starts_with(crate::data::POKEMMO) {
+                ui.label(RichText::new(t(l, "Gen 5 rules and learnsets; boss teams from the original games, PokeMMO's own may differ. No save to load: enter your team by hand.",
+                    "Regeln und Attacken wie Gen 5; Boss-Teams aus den Originalspielen, bei PokeMMO können sie abweichen. Kein Spielstand zum Laden: Team von Hand eingeben.")).color(MUTED).small());
+            }
             if chosen != self.game_id {
                 self.game_id = chosen;
                 self.badges.clear();
