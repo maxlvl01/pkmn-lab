@@ -94,10 +94,45 @@ pub fn apply_rom_teams(rom: &[u8], game_id: &str, bosses: &mut [Boss], dex: &Dex
         let Some(&(_, id)) = HGSS_TRAINERS.iter().find(|(k, _)| *k == norm(&b.name_en)) else { continue };
         if let Some(team) = trainer_team(trdata, trpoke, id, dex) {
             b.team = team;
+            b.id = Some(id as u16);
             n += 1;
         }
     }
     Ok(n)
+}
+
+/// Every other trainer in an HGSS ROM (routes, rival, Team Rocket, ...), named from the ROM's own text.
+pub fn hgss_trainers(rom: &[u8], dex: &Dex) -> Vec<Boss> {
+    let (Some(trdata), Some(trpoke), Some(msgs)) = (nds_file(rom, "a/0/5/5"), nds_file(rom, "a/0/5/6"), nds_file(rom, "a/0/2/7")) else {
+        return vec![];
+    };
+    // Message files 729/730: trainer names and class names (found by decoding the German ROM).
+    let names = narc(msgs, 729).map(gen4_messages).unwrap_or_default();
+    let classes = narc(msgs, 730).map(gen4_messages).unwrap_or_default();
+    let count = u16le(trdata, 0x18) as usize;
+    (1..count).filter(|id| !HGSS_TRAINERS.iter().any(|t| t.1 == *id)).filter_map(|id| {
+        let head = narc(trdata, id)?;
+        let team = trainer_team(trdata, trpoke, id, dex)?;
+        if team.is_empty() { return None; }
+        let class = classes.get(head[1] as usize).cloned().unwrap_or_default().replace('⒆', "PKMN");
+        // Not story fights: the Battle Frontier brains (placeholder teams here, their real ones live elsewhere) and
+        // scripted passers-by. Class names as they appear in the German ROM.
+        if ["Kampfkoloss", "Saaldiva", "Fabrikleiter", "Arkaden-Star", "Kammerdiener", "Passant"].iter().any(|c| class.starts_with(c)) {
+            return None;
+        }
+        let name = format!("{class} {}", names.get(id).map(String::as_str).unwrap_or("")).trim().to_string();
+        Some(Boss {
+            kind: if class == "Rivale" { "rival".into() } else { "trainer".into() },
+            name_en: name.clone(),
+            name_de: name,
+            type_: None,
+            location_en: None,
+            location_de: None,
+            variant: None,
+            team,
+            id: Some(id as u16),
+        })
+    }).collect()
 }
 
 /// Level-up learnsets from an HGSS ROM (a/0/3/3): species -> [(level, move id)].
@@ -137,4 +172,43 @@ pub fn hgss_evolutions(rom: &[u8]) -> Option<std::collections::HashMap<u16, Vec<
         }).collect();
         (!list.is_empty()).then_some((sp, list))
     }).collect())
+}
+
+/// Gen 4 message file: every string is XOR-encrypted with a key that changes per character.
+pub fn gen4_messages(file: &[u8]) -> Vec<String> {
+    if file.len() < 4 { return vec![]; }
+    let (count, seed) = (u16le(file, 0) as usize, u16le(file, 2) as u32);
+    (0..count).map(|i| {
+        let n = i as u32 + 1;
+        let key = (seed.wrapping_mul(0x2FD).wrapping_mul(n)) & 0xFFFF;
+        let key2 = key | (key << 16);
+        let Some(entry) = file.get(4 + i * 8..12 + i * 8) else { return String::new() };
+        let off = (u32::from_le_bytes(entry[0..4].try_into().unwrap()) ^ key2) as usize;
+        let len = (u32::from_le_bytes(entry[4..8].try_into().unwrap()) ^ key2) as usize;
+        let mut k = (0x91BD3u32.wrapping_mul(n)) & 0xFFFF;
+        let units = (0..len.min(512)).map_while(|j| {
+            let c = u16le(file.get(off..)?, 2 * j) as u32 ^ k;
+            k = (k + 0x493D) & 0xFFFF;
+            Some(c as u16)
+        });
+        crate::save::gen4_text(unpack9(units.collect()))
+    }).collect()
+}
+
+/// Names (e.g. trainer names) are stored packed: 0xF100, then 9-bit character codes in 15-bit chunks, 0x1FF = end.
+fn unpack9(units: Vec<u16>) -> Vec<u16> {
+    if units.first() != Some(&0xF100) { return units; }
+    let (mut out, mut buf, mut bits) = (vec![], 0u32, 0);
+    for &u in &units[1..] {
+        buf |= ((u & 0x7FFF) as u32) << bits;
+        bits += 15;
+        while bits >= 9 {
+            let c = (buf & 0x1FF) as u16;
+            if c == 0x1FF { return out; }
+            out.push(c);
+            buf >>= 9;
+            bits -= 9;
+        }
+    }
+    out
 }

@@ -80,6 +80,9 @@ pub struct Boss {
     pub variant: Option<String>,
     #[serde(default)]
     pub team: Vec<BossMon>,
+    /// trainer id in the ROM (set when read from a ROM), used for the save's "beaten" flags
+    #[serde(default)]
+    pub id: Option<u16>,
 }
 
 #[derive(Deserialize)]

@@ -1,7 +1,7 @@
 //! Team analysis: type matchups, coverage, rating, projection, recommendations, boss matchups.
 //! Returns plain data (ids, numbers); the UI turns it into German or English text.
 use crate::data::{Boss, Dex, EvoHow, Learnsets, Move, VersionGroup};
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct Mon {
@@ -21,6 +21,10 @@ pub struct Game<'a> {
     pub owned_machines: Option<&'a HashSet<u16>>,
     /// Catch tips only from the game's own (regional) Pokédex.
     pub regional: bool,
+    /// all other trainers (from a ROM); empty = unknown
+    pub trainers: &'a [Boss],
+    /// trainer ids the save marks as beaten
+    pub beaten: Option<&'a HashSet<u16>>,
 }
 
 // ---------------- report data ----------------
@@ -42,6 +46,10 @@ pub struct Report {
     pub projection: Projection,
     pub catch: Vec<CatchRec>,
     pub bosses: Vec<BossView>,
+    /// bosses already beaten (badge or save flag), story order
+    pub beaten_bosses: Vec<BossView>,
+    /// every other trainer, sorted by their top level
+    pub trainers: Vec<BossView>,
 }
 
 pub struct MemberView {
@@ -142,6 +150,7 @@ pub struct BossView {
     pub their_max: u8,
     /// our team as projected for this fight: (species, level) per member
     pub team: Vec<(u16, u8)>,
+    pub beaten: bool,
     pub mons: Vec<BossMonView>,
 }
 
@@ -223,7 +232,7 @@ fn remaining(game: &Game) -> Vec<usize> {
                 }
                 "elite4" | "champion" => post_game,
                 _ => false,
-            };
+            } || b.id.zip(game.beaten).is_some_and(|(id, set)| set.contains(&id));
             !done && !b.team.is_empty()
         })
         .collect()
@@ -282,6 +291,7 @@ pub fn analyse(dex: &Dex, game: &Game, team: &[Mon], focus: Option<usize>) -> Re
 
     let now = summarize(dex, &fighters, gn);
     let ahead = remaining(game);
+    let done: Vec<usize> = (0..game.bosses.len()).filter(|i| !ahead.contains(i) && !game.bosses[*i].team.is_empty()).collect();
     // Future potential: the team as it can be by the last boss ahead (evolved, its best moves by then).
     let later = project(dex, game, team, &ahead, ahead.last().copied());
     let summary = Summary { rating: (now.rating as f32 * 0.6 + later.rating_after as f32 * 0.4).round() as u32, ..now };
@@ -298,7 +308,9 @@ pub fn analyse(dex: &Dex, game: &Game, team: &[Mon], focus: Option<usize>) -> Re
         potential_level: later.target,
         projection: project(dex, game, team, &ahead, focus),
         catch: recommend(dex, gn, &fighters, (game.regional && !game.learn.regional.is_empty()).then_some(&game.learn.regional)),
-        bosses: bosses(dex, game, team, &ahead),
+        bosses: bosses(dex, game, team, &ahead, false),
+        beaten_bosses: bosses(dex, game, team, &done, true),
+        trainers: trainers(dex, game, team),
     }
 }
 
@@ -467,14 +479,46 @@ fn plan(dex: &Dex, game: &Game, m: &Mon, level: u8, targets: &[(Vec<u8>, f32)]) 
     (pm, fighter)
 }
 
-fn bosses(dex: &Dex, game: &Game, team: &[Mon], ahead: &[usize]) -> Vec<BossView> {
-    let gn = game.vg.gn;
-    ahead.iter().map(|&bi| {
+fn bosses(dex: &Dex, game: &Game, team: &[Mon], list: &[usize], beaten: bool) -> Vec<BossView> {
+    list.iter().map(|&bi| {
         let b = &game.bosses[bi];
         let their_max = b.team.iter().map(|m| m.level).max().unwrap_or(1);
         // Judge the fight with the team you will realistically bring: raised to their top level, evolved, with its best moves.
         let t = targets(dex, game, &[bi]);
         let plans: Vec<(ProjMember, Fighter)> = team.iter().map(|m| plan(dex, game, m, their_max, &t)).collect();
+        judge(dex, game, b, bi, &plans, beaten)
+    }).collect()
+}
+
+/// The rival's team depends on your starter: keep only the version that matches (by the starter line in your team).
+fn rival_matches(team: &[Mon], b: &Boss) -> bool {
+    let lines: [[u16; 3]; 3] = [[152, 153, 154], [155, 156, 157], [158, 159, 160]];
+    let line = |sp: u16| lines.iter().position(|l| l.contains(&sp));
+    let Some(ours) = team.iter().find_map(|m| line(m.species)) else { return true };
+    let Some(theirs) = b.team.iter().find_map(|m| line(m.dex)) else { return true };
+    theirs == (ours + 1) % 3 // the line that beats yours: grass -> fire -> water -> grass
+}
+
+/// Every other trainer, judged against your team raised to their level (plans shared per level).
+fn trainers(dex: &Dex, game: &Game, team: &[Mon]) -> Vec<BossView> {
+    let t = targets(dex, game, &[]);
+    let mut cache: HashMap<u8, Vec<(ProjMember, Fighter)>> = HashMap::new();
+    let mut out: Vec<BossView> = game.trainers.iter().enumerate()
+        .filter(|(_, b)| b.kind != "rival" || rival_matches(team, b))
+        .map(|(i, b)| {
+            let lv = b.team.iter().map(|m| m.level).max().unwrap_or(1);
+            let plans = cache.entry(lv).or_insert_with(|| team.iter().map(|m| plan(dex, game, m, lv, &t)).collect());
+            let beaten = b.id.zip(game.beaten).is_some_and(|(id, set)| set.contains(&id));
+            judge(dex, game, b, i, plans, beaten)
+        })
+        .collect();
+    out.sort_by_key(|v| (v.their_max, v.boss));
+    out
+}
+
+fn judge(dex: &Dex, game: &Game, b: &Boss, bi: usize, plans: &[(ProjMember, Fighter)], beaten: bool) -> BossView {
+        let gn = game.vg.gn;
+        let their_max = b.team.iter().map(|m| m.level).max().unwrap_or(1);
         let fighters: Vec<&Fighter> = plans.iter().map(|p| &p.1).collect();
         let mut our_score = 0.0;
         let mut their_threat = 0.0;
@@ -498,8 +542,7 @@ fn bosses(dex: &Dex, game: &Game, team: &[Mon], ahead: &[usize]) -> Vec<BossView
         let score = our_score / n - their_threat / n * 1.5 + strength;
         let verdict = if score >= 1.2 { Verdict::Dominate } else if score >= 0.6 { Verdict::Even } else { Verdict::Struggle };
         let team = plans.iter().map(|p| (p.0.growth.species, p.0.growth.level)).collect();
-        BossView { boss: bi, verdict, their_max, team, mons }
-    }).collect()
+        BossView { boss: bi, verdict, their_max, team, beaten, mons }
 }
 
 /// How much a damaging move is worth to this Pokémon: (type, power x STAB x accuracy x attacking stat / 100).
@@ -562,12 +605,22 @@ mod tests {
     }
 
     #[test]
+    fn rival_follows_your_starter() {
+        let boss = |sp: u16| Boss { kind: "rival".into(), name_en: String::new(), name_de: String::new(), type_: None, location_en: None,
+            location_de: None, variant: None, team: vec![crate::data::BossMon { dex: sp, level: 5, moves: vec![] }], id: None };
+        let karnimani = [Mon { species: 158, level: 10, moves: vec![], nickname: None }];
+        assert!(rival_matches(&karnimani, &boss(152)));  // you: water -> Silber: Endivie
+        assert!(!rival_matches(&karnimani, &boss(155)));
+        assert!(!rival_matches(&karnimani, &boss(158)));
+    }
+
+    #[test]
     fn counters_and_projection() {
         let dex = Dex::load();
         let vg = dex.vg("heartgold-soulsilver").unwrap();
         let learn = dex.learnsets(vg);
         let bosses = dex.bosses.iter().find(|g| g.id == vg.ident).unwrap().bosses.clone();
-        let game = Game { vg, bosses: &bosses, badges: &[], learn: &learn, owned_machines: None, regional: false };
+        let game = Game { vg, bosses: &bosses, badges: &[], learn: &learn, owned_machines: None, regional: false, trainers: &[], beaten: None };
         let aqua = dex.find_move("Aquaknarre").unwrap().id;
         let tackle = dex.find_move("Tackle").unwrap().id;
         let team = vec![

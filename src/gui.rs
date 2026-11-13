@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone, Copy, PartialEq)]
-enum Tab { Team, Defense, Offense, Projection, Catch, Bosses }
+enum Tab { Team, Defense, Offense, Projection, Catch, Bosses, Trainers }
 
 /// What survives a restart.
 #[derive(serde::Serialize, serde::Deserialize, Default)]
@@ -30,6 +30,7 @@ struct RomData {
     bosses: Vec<Boss>,
     level_up: HashMap<u16, Vec<(u8, u16)>>,
     evolutions: HashMap<u16, Vec<(u16, EvoHow)>>,
+    trainers: Vec<Boss>,
 }
 
 pub struct App {
@@ -47,6 +48,17 @@ pub struct App {
     /// Learnsets and bosses of the current game (rebuilt when game or ROM changes)
     learn: Learnsets,
     bosses: Vec<Boss>,
+    /// all other trainers of the game (from the ROM)
+    trainers: Vec<Boss>,
+    /// trainer ids the save marks as beaten
+    beaten: Option<HashSet<u16>>,
+    show_beaten_bosses: bool,
+    trainer_filter: u8,
+    trainer_search: String,
+    trainer_limit: usize,
+    /// Spoiler protection is on at every start; the player confirms once per session to lift it.
+    spoilers_shown: bool,
+    spoiler_ask: bool,
     data_key: String,
     report: Option<Report>,
     dirty: bool,
@@ -181,6 +193,14 @@ impl App {
             rom: None,
             learn: Learnsets::default(),
             bosses: vec![],
+            trainers: vec![],
+            beaten: None,
+            show_beaten_bosses: false,
+            trainer_filter: 0,
+            trainer_search: String::new(),
+            trainer_limit: 30,
+            spoilers_shown: false,
+            spoiler_ask: false,
             data_key: String::new(),
             report: None,
             dirty: true,
@@ -236,6 +256,7 @@ impl App {
                 self.team = info.team;
                 self.trainer = info.trainer;
                 self.owned_tms = info.machines;
+                self.beaten = info.beaten_trainers.map(|v| v.into_iter().collect());
                 self.save_path = Some(path.into());
                 self.search.clear();
                 self.dirty = true;
@@ -251,7 +272,7 @@ impl App {
             let game = "heartgold-soulsilver";
             let mut bosses = self.dex.bosses.iter().find(|g| g.id == game).map(|g| g.bosses.clone()).unwrap_or_default();
             rom::apply_rom_teams(&bytes, game, &mut bosses, &self.dex)?;
-            Ok(RomData { bosses, level_up: rom::hgss_learnsets(&bytes).unwrap_or_default(), evolutions: rom::hgss_evolutions(&bytes).unwrap_or_default() })
+            Ok(RomData { bosses, level_up: rom::hgss_learnsets(&bytes).unwrap_or_default(), evolutions: rom::hgss_evolutions(&bytes).unwrap_or_default(), trainers: rom::hgss_trainers(&bytes, &self.dex) })
         });
         match result {
             Ok(r) => {
@@ -271,10 +292,12 @@ impl App {
         let vg = self.dex.vg(&self.game_id).expect("valid game id");
         self.learn = self.dex.learnsets(vg);
         self.bosses = self.dex.bosses.iter().find(|g| g.id == self.game_id).map(|g| g.bosses.clone()).unwrap_or_default();
+        self.trainers.clear();
         if let (true, Some(r)) = (self.game_id == "heartgold-soulsilver", &self.rom) {
             self.bosses = r.bosses.clone();
             if !r.level_up.is_empty() { self.learn.level_up = r.level_up.clone(); }
             if !r.evolutions.is_empty() { self.learn.evolutions = r.evolutions.clone(); }
+            self.trainers = r.trainers.clone();
         }
         self.data_key = key;
     }
@@ -288,7 +311,7 @@ impl App {
         let owned: Option<HashSet<u16>> = self.owned_tms.as_ref().map(|ns| {
             self.learn.machine_no.iter().filter(|(_, n)| ns.contains(n)).map(|(&mv, _)| mv).collect()
         });
-        let game = Game { vg, bosses: &self.bosses, badges: &self.badges, learn: &self.learn, owned_machines: owned.as_ref(), regional: !self.national_dex };
+        let game = Game { vg, bosses: &self.bosses, badges: &self.badges, learn: &self.learn, owned_machines: owned.as_ref(), regional: !self.national_dex, trainers: &self.trainers, beaten: self.beaten.as_ref() };
         self.report = Some(analysis::analyse(&self.dex, &game, &self.team, self.proj_focus));
     }
 }
@@ -863,72 +886,186 @@ impl App {
         });
     }
 
-    fn tab_bosses(&self, ui: &mut Ui, r: &Report) {
+    fn tab_bosses(&mut self, ui: &mut Ui, r: &Report) {
         let l = self.lang;
-        if r.bosses.is_empty() {
+        self.spoiler_bar(ui);
+        if !r.beaten_bosses.is_empty() {
+            let label = format!("{} ({})", t(l, "Show beaten bosses", "Besiegte Bosse zeigen"), r.beaten_bosses.len());
+            ui.checkbox(&mut self.show_beaten_bosses, label);
+            ui.add_space(4.0);
+        }
+        if r.bosses.is_empty() && !(self.show_beaten_bosses && !r.beaten_bosses.is_empty()) {
             card(ui, |ui| ui.label(t(l, "No bosses left (or no boss data for this game).", "Keine Bosse mehr übrig (oder keine Boss-Daten für dieses Spiel).")));
             return;
         }
-        let our_max = self.team.iter().map(|m| m.level).max().unwrap_or(1);
-        let items: Vec<_> = r.bosses.iter().enumerate().collect();
-        card_rows(ui, &items, 540.0, |ui, &(k, bv)| {
-            let b = &self.bosses[bv.boss];
-            card(ui, |ui| {
-                ui.set_width(540.0);
+        let mut items: Vec<(&analysis::BossView, bool)> = vec![];
+        if self.show_beaten_bosses { items.extend(r.beaten_bosses.iter().map(|b| (b, false))); }
+        items.extend(r.bosses.iter().enumerate().map(|(k, b)| (b, k == 0)));
+        card_rows(ui, &items, 540.0, |ui, &(bv, next)| {
+            self.fight_card(ui, bv, &self.bosses[bv.boss], next, next, "boss");
+        });
+    }
+
+    fn tab_trainers(&mut self, ui: &mut Ui, r: &Report) {
+        let l = self.lang;
+        if r.trainers.is_empty() {
+            card(ui, |ui| ui.label(t(l,
+                "Load your HeartGold/SoulSilver ROM (left) to see every trainer and your rival, read from the ROM itself.",
+                "Lade deine HeartGold/SoulSilver-ROM (links), dann siehst du jeden Trainer und deinen Rivalen, direkt aus der ROM gelesen.")));
+            return;
+        }
+        let beaten = r.trainers.iter().filter(|v| v.beaten).count();
+        ui.horizontal(|ui| {
+            for (k, en, de, n) in [(0u8, "Upcoming", "Kommend", r.trainers.len() - beaten), (1, "Beaten", "Besiegt", beaten), (2, "All", "Alle", r.trainers.len())] {
+                let on = self.trainer_filter == k;
+                let b = egui::Button::new(RichText::new(format!("{} ({n})", t(l, en, de))).color(if on { Color32::WHITE } else { MUTED }))
+                    .fill(if on { ACCENT } else { CARD }).corner_radius(CornerRadius::same(8));
+                if ui.add(b).clicked() { self.trainer_filter = k; self.trainer_limit = 30; }
+            }
+            ui.add_space(12.0);
+            if ui.add(egui::TextEdit::singleline(&mut self.trainer_search)
+                .hint_text(t(l, "Search name, class or Pokémon", "Name, Klasse oder Pokémon suchen")).desired_width(260.0)).changed()
+            {
+                self.trainer_limit = 30;
+            }
+        });
+        self.spoiler_bar(ui);
+        if !self.spoilers_shown && self.trainer_filter != 1 {
+            card(ui, |ui| ui.label(t(l,
+                "Upcoming trainers are hidden by the spoiler protection. Your beaten fights are under \"Beaten\".",
+                "Kommende Trainer sind durch den Spoiler-Schutz verborgen. Deine geschlagenen Kämpfe stehen unter \"Besiegt\".")));
+            return;
+        }
+        ui.label(RichText::new(t(l,
+            "Sorted by their strongest Pokémon's level. Each fight is judged with your team raised to that level. Beaten = marked in your save.",
+            "Sortiert nach dem Level ihres stärksten Pokémon. Jeder Kampf wird mit deinem Team auf diesem Level bewertet. Besiegt = laut deinem Spielstand.")).color(MUTED));
+        ui.add_space(4.0);
+        let q = crate::data::norm(&self.trainer_search);
+        let list: Vec<&analysis::BossView> = r.trainers.iter()
+            .filter(|v| match self.trainer_filter { 0 => !v.beaten, 1 => v.beaten, _ => true })
+            .filter(|v| {
+                if q.is_empty() { return true; }
+                let b = &self.trainers[v.boss];
+                crate::data::norm(&b.name_de).contains(&q) || v.mons.iter().any(|m| crate::data::norm(&self.sname(m.species)).contains(&q))
+            })
+            .collect();
+        let shown: Vec<(&analysis::BossView, bool)> = list.iter().take(self.trainer_limit).map(|&v| (v, false)).collect();
+        card_rows(ui, &shown, 540.0, |ui, &(bv, _)| {
+            self.fight_card(ui, bv, &self.trainers[bv.boss], false, false, "trainer");
+        });
+        if list.len() > self.trainer_limit
+            && ui.add_sized([240.0, 32.0], egui::Button::new(format!("{} ({} {})", t(l, "Show more", "Mehr zeigen"), list.len() - self.trainer_limit, t(l, "left", "übrig")))).clicked()
+        {
+            self.trainer_limit += 30;
+        }
+    }
+
+    /// Spoiler protection status, with a confirm dialog before revealing upcoming teams.
+    fn spoiler_bar(&mut self, ui: &mut Ui) {
+        let l = self.lang;
+        ui.horizontal(|ui| {
+            if self.spoilers_shown {
+                ui.label(RichText::new(t(l, "Spoilers shown: upcoming teams and their moves are visible.",
+                    "Spoiler sichtbar: kommende Teams und ihre Attacken werden angezeigt.")).color(OKAY));
+                if ui.button(t(l, "Hide again", "Wieder verbergen")).clicked() { self.spoilers_shown = false; }
+            } else {
+                ui.label(RichText::new(t(l, "Spoiler protection: teams and moves of fights ahead are hidden. The verdict stays visible.",
+                    "Spoiler-Schutz: Teams und Attacken kommender Kämpfe sind verborgen. Die Einschätzung bleibt sichtbar.")).color(MUTED));
+                if ui.button(t(l, "Show spoilers …", "Spoiler anzeigen …")).clicked() { self.spoiler_ask = true; }
+            }
+        });
+        ui.add_space(4.0);
+        if self.spoiler_ask {
+            let ctx = ui.ctx().clone();
+            let resp = egui::Modal::new(egui::Id::unique("spoiler_ask")).show(&ctx, |ui| {
+                ui.set_width(400.0);
+                ui.label(RichText::new(t(l, "Show spoilers?", "Spoiler anzeigen?")).size(18.0).strong());
+                ui.add_space(4.0);
+                ui.label(t(l, "This shows the teams and moves of every upcoming boss, rival and trainer. Do you really want to see them?",
+                    "Damit siehst du Teams und Attacken aller kommenden Bosse, Rivalen und Trainer. Willst du sie wirklich sehen?"));
+                ui.add_space(10.0);
                 ui.horizontal(|ui| {
-                    sprite(ui, self.sprites.trainer(&b.name_en, &self.game_id), 72.0);
-                    ui.vertical(|ui| {
-                        ui.horizontal(|ui| {
-                            ui.label(RichText::new(l.pick(&b.name_en, &b.name_de)).size(17.0).strong());
-                            if let Some(ty) = b.type_.as_deref().and_then(|x| self.dex.type_by_ident(x)) { self.type_badge(ui, ty); }
-                            self.verdict_pill(ui, bv.verdict);
-                            if k == 0 { pill(ui, t(l, "next", "als Nächstes"), ACCENT); }
-                        });
-                        let place = l.pick(b.location_en.as_deref().unwrap_or(""), b.location_de.as_deref().unwrap_or(""));
-                        let var = b.variant.as_ref().map(|v| format!("  ({v})")).unwrap_or_default();
-                        ui.label(RichText::new(format!("{place}{var}")).color(MUTED));
-                        let gap = bv.their_max as i32 - our_max as i32;
-                        let col = if gap > 3 { BAD } else if gap > 0 { OKAY } else { GOOD };
-                        ui.label(RichText::new(format!("{} {}  ·  {} {}", t(l, "Their top level", "Ihr höchstes Level"), bv.their_max, t(l, "yours now", "deins jetzt"), our_max)).color(col));
-                        ui.horizontal(|ui| {
-                            ui.label(RichText::new(t(l, "Judged with your team at their level:", "Bewertet mit deinem Team auf ihrem Level:")).color(MUTED).small());
-                            for &(sp, _) in &bv.team { self.species_sprite(ui, sp, 32.0); }
-                        });
+                    if ui.button(t(l, "Yes, show them", "Ja, anzeigen")).clicked() { self.spoilers_shown = true; self.spoiler_ask = false; }
+                    if ui.button(t(l, "No", "Nein")).clicked() { self.spoiler_ask = false; }
+                });
+            });
+            if resp.should_close() { self.spoiler_ask = false; }
+        }
+    }
+
+    /// One fight (boss or trainer): who, verdict, levels, and their team with your answer to each Pokémon.
+    fn fight_card(&self, ui: &mut Ui, bv: &analysis::BossView, b: &Boss, next: bool, open: bool, salt: &str) {
+        let l = self.lang;
+        let our_max = self.team.iter().map(|m| m.level).max().unwrap_or(1);
+        let hidden = !self.spoilers_shown && !bv.beaten;
+        card(ui, |ui| {
+            ui.set_width(540.0);
+            if bv.beaten { ui.multiply_opacity(0.6); }
+            ui.horizontal(|ui| {
+                match b.kind.as_str() {
+                    // Route trainers have no portrait source; their ace stands in.
+                    "trainer" if hidden => mystery(ui, 72.0),
+                    "trainer" => self.species_sprite(ui, b.team.iter().max_by_key(|m| m.level).map_or(0, |m| m.dex), 72.0),
+                    "rival" => sprite(ui, self.sprites.trainer("silver", &self.game_id), 72.0),
+                    _ => sprite(ui, self.sprites.trainer(&b.name_en, &self.game_id), 72.0),
+                }
+                ui.vertical(|ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new(l.pick(&b.name_en, &b.name_de)).size(17.0).strong());
+                        if let Some(ty) = b.type_.as_deref().and_then(|x| self.dex.type_by_ident(x)) { self.type_badge(ui, ty); }
+                        if b.kind == "rival" { pill(ui, t(l, "Rival", "Rivale"), Color32::from_rgb(0x8a, 0x5c, 0xd6)); }
+                        self.verdict_pill(ui, bv.verdict);
+                        if bv.beaten { pill(ui, t(l, "Beaten", "Besiegt"), CARD_HI); }
+                        if next { pill(ui, t(l, "next", "als Nächstes"), ACCENT); }
+                    });
+                    let place = l.pick(b.location_en.as_deref().unwrap_or(""), b.location_de.as_deref().unwrap_or(""));
+                    let var = b.variant.as_ref().map(|v| format!("  ({v})")).unwrap_or_default();
+                    if !place.is_empty() || !var.is_empty() { ui.label(RichText::new(format!("{place}{var}")).color(MUTED)); }
+                    let gap = bv.their_max as i32 - our_max as i32;
+                    let col = if bv.beaten { MUTED } else if gap > 3 { BAD } else if gap > 0 { OKAY } else { GOOD };
+                    ui.label(RichText::new(format!("{} {}  ·  {} {}", t(l, "Their top level", "Ihr höchstes Level"), bv.their_max, t(l, "yours now", "deins jetzt"), our_max)).color(col));
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new(t(l, "Judged with your team at their level:", "Bewertet mit deinem Team auf ihrem Level:")).color(MUTED).small());
+                        for &(sp, _) in &bv.team { self.species_sprite(ui, sp, 32.0); }
                     });
                 });
-                egui::CollapsingHeader::new(t(l, "Their team and your answers", "Ihr Team und deine Konter"))
-                    .id_salt(("boss", bv.boss)).default_open(k < 2).show(ui, |ui| {
-                    egui::Grid::new(("bossgrid", bv.boss)).spacing([14.0, 6.0]).show(ui, |ui| {
-                        for bm in &bv.mons {
-                            ui.horizontal(|ui| {
-                                self.species_sprite(ui, bm.species, 48.0);
-                                ui.vertical(|ui| {
-                                    ui.label(RichText::new(format!("{}  Lv {}", self.sname(bm.species), bm.level)).strong());
-                                    self.types_row(ui, &bm.types);
+            });
+            if hidden {
+                ui.label(RichText::new(t(l, "Team and moves hidden (spoiler protection)", "Team und Attacken verborgen (Spoiler-Schutz)")).color(MUTED).italics());
+                return;
+            }
+            egui::CollapsingHeader::new(t(l, "Their team and your answers", "Ihr Team und deine Konter"))
+                .id_salt((salt, bv.boss)).default_open(open).show(ui, |ui| {
+                egui::Grid::new((salt, "grid", bv.boss)).spacing([14.0, 6.0]).show(ui, |ui| {
+                    for bm in &bv.mons {
+                        ui.horizontal(|ui| {
+                            self.species_sprite(ui, bm.species, 48.0);
+                            ui.vertical(|ui| {
+                                ui.label(RichText::new(format!("{}  Lv {}", self.sname(bm.species), bm.level)).strong());
+                                self.types_row(ui, &bm.types);
+                            });
+                        });
+                        ui.vertical(|ui| {
+                            ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
+                            for &mv in &bm.moves { ui.label(RichText::new(self.mname(mv)).small().color(MUTED)); }
+                        });
+                        ui.vertical(|ui| {
+                            ui.label(RichText::new(t(l, "Your answer", "Dein Konter")).small().color(MUTED));
+                            if let Some((i, mult)) = bm.answer {
+                                ui.horizontal(|ui| {
+                                    self.species_sprite(ui, bv.team[i].0, 32.0);
+                                    ui.label(self.sname(bv.team[i].0));
+                                    pill(ui, &mult_label(mult), mult_color(mult, true));
                                 });
-                            });
-                            ui.vertical(|ui| {
-                                ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
-                                for &mv in &bm.moves { ui.label(RichText::new(self.mname(mv)).small().color(MUTED)); }
-                            });
-                            ui.vertical(|ui| {
-                                ui.label(RichText::new(t(l, "Your answer", "Dein Konter")).small().color(MUTED));
-                                if let Some((i, mult)) = bm.answer {
-                                    ui.horizontal(|ui| {
-                                        self.species_sprite(ui, bv.team[i].0, 32.0);
-                                        ui.label(self.sname(bv.team[i].0));
-                                        pill(ui, &mult_label(mult), mult_color(mult, true));
-                                    });
-                                }
-                            });
-                            ui.vertical(|ui| {
-                                ui.label(RichText::new(t(l, "Threatens", "Bedroht")).small().color(MUTED));
-                                let col = if bm.threatens == 0 { GOOD } else if bm.threatens * 2 < self.team.len() { OKAY } else { BAD };
-                                ui.label(RichText::new(format!("{}/{}", bm.threatens, self.team.len())).color(col).strong());
-                            });
-                            ui.end_row();
-                        }
-                    });
+                            }
+                        });
+                        ui.vertical(|ui| {
+                            ui.label(RichText::new(t(l, "Threatens", "Bedroht")).small().color(MUTED));
+                            let col = if bm.threatens == 0 { GOOD } else if bm.threatens * 2 < self.team.len() { OKAY } else { BAD };
+                            ui.label(RichText::new(format!("{}/{}", bm.threatens, self.team.len())).color(col).strong());
+                        });
+                        ui.end_row();
+                    }
                 });
             });
         });
@@ -1014,7 +1151,7 @@ impl eframe::App for App {
             ui.horizontal(|ui| {
                 for (tab, en, de) in [
                     (Tab::Team, "Team", "Team"), (Tab::Defense, "Weaknesses", "Schwächen"), (Tab::Offense, "Attack", "Angriff"),
-                    (Tab::Projection, "Projection", "Projektion"), (Tab::Catch, "Catch next", "Fangen"), (Tab::Bosses, "Bosses", "Bosse"),
+                    (Tab::Projection, "Projection", "Projektion"), (Tab::Catch, "Catch next", "Fangen"), (Tab::Bosses, "Bosses", "Bosse"), (Tab::Trainers, "Trainers", "Trainer"),
                 ] {
                     let selected = self.tab == tab;
                     let text = RichText::new(t(l, en, de)).size(15.0).color(if selected { Color32::WHITE } else { MUTED });
@@ -1031,6 +1168,7 @@ impl eframe::App for App {
                 Tab::Projection => self.tab_projection(ui, &r),
                 Tab::Catch => self.tab_catch(ui, &r),
                 Tab::Bosses => self.tab_bosses(ui, &r),
+                Tab::Trainers => self.tab_trainers(ui, &r),
             });
             self.report = Some(r);
         });
@@ -1057,6 +1195,14 @@ impl eframe::App for App {
         };
         eframe::set_value(storage, eframe::APP_KEY, &saved);
     }
+}
+
+/// Placeholder portrait for a hidden trainer: a dark disc with a question mark.
+fn mystery(ui: &mut Ui, size: f32) {
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(size, size), egui::Sense::hover());
+    let p = ui.painter();
+    p.circle_filled(rect.center(), size * 0.38, CARD_HI);
+    p.text(rect.center(), egui::Align2::CENTER_CENTER, "?", egui::FontId::proportional(size * 0.4), MUTED);
 }
 
 /// Cards of a fixed inner width in as many columns as fit (egui can't wrap a card before it knows its size).

@@ -12,6 +12,8 @@ pub struct SaveInfo {
     pub team: Vec<Mon>,
     /// TM/HM numbers in the bag (PokeAPI numbering, HM01 = 101); None = not read for this gen yet.
     pub machines: Option<Vec<u16>>,
+    /// Trainer ids (ROM numbering) already beaten; None = not read for this game.
+    pub beaten_trainers: Option<Vec<u16>>,
 }
 
 fn u16le(d: &[u8], o: usize) -> u16 { u16::from_le_bytes([d[o], d[o + 1]]) }
@@ -147,7 +149,7 @@ fn gen12(d: &[u8]) -> Option<SaveInfo> {
         .collect();
     let trainer = Some(gb_text(&d[if gen1 { 0x2598 } else { 0x200B }..][..11]));
     let badges = badges.iter().flatten().flat_map(|&o| bits(d[o])).collect();
-    Some(SaveInfo { game: Some(game.into()), trainer, badges, team, machines: None })
+    Some(SaveInfo { game: Some(game.into()), trainer, badges, team, machines: None, beaten_trainers: None })
 }
 
 // ---------------- Gen 3 ----------------
@@ -240,7 +242,7 @@ fn gen3(d: &[u8]) -> Option<SaveInfo> {
         let f = first_badge + n;
         large[flags + (f >> 3)] >> (f & 7) & 1 == 1
     }).collect();
-    Some(SaveInfo { game: Some(game.into()), trainer: Some(gen3_text(&small[..8])), badges, team, machines: None })
+    Some(SaveInfo { game: Some(game.into()), trainer: Some(gen3_text(&small[..8])), badges, team, machines: None, beaten_trainers: None })
 }
 
 // ---------------- Gen 4 / 5 (PK4/PK5) and 6 / 7 (PK6/PK7) ----------------
@@ -347,7 +349,15 @@ fn gen4(d: &[u8]) -> Option<SaveInfo> {
         .filter(|item| (328..=427).contains(item))
         .map(|item| if item >= 420 { item - 419 + 100 } else { item - 327 })
         .collect();
-    Some(SaveInfo { game: Some(game.into()), trainer: Some(gen4_text(u16s(gd, trainer, 8))), badges, team, machines: Some(machines) })
+    // HGSS trainer flags: event flags (at 0x10C4, LSB first) number 0x550 + trainer id (PKHeX SAV4HGSS, pret flags.h;
+    // checked on Max's save: the route trainers and Sprout Tower Sages he beat, not Falkner).
+    let beaten_trainers = (game == "heartgold-soulsilver").then(|| {
+        (1..738u16).filter(|&id| {
+            let f = 0x550 + id as usize;
+            gd[0x10C4 + f / 8] >> (f % 8) & 1 == 1
+        }).collect()
+    });
+    Some(SaveInfo { game: Some(game.into()), trainer: Some(gen4_text(u16s(gd, trainer, 8))), badges, team, machines: Some(machines), beaten_trainers })
 }
 
 fn crc16_ccitt(data: &[u8]) -> u16 {
@@ -379,7 +389,7 @@ fn gen5(d: &[u8]) -> Option<SaveInfo> {
             Some(mon)
         })
         .collect();
-    Some(SaveInfo { game: Some(game.into()), trainer: Some(utf16(d, 0x19404, 8)), badges: bits(d[misc + 4]).collect(), team, machines: None })
+    Some(SaveInfo { game: Some(game.into()), trainer: Some(utf16(d, 0x19404, 8)), badges: bits(d[misc + 4]).collect(), team, machines: None, beaten_trainers: None })
 }
 
 fn gen67(d: &[u8]) -> Option<SaveInfo> {
@@ -403,7 +413,7 @@ fn gen67(d: &[u8]) -> Option<SaveInfo> {
         .collect();
     // Gen 7 has no badges; its grand trials stay "ahead" in the report.
     let badges = badge.map(|b| bits(d[b]).collect()).unwrap_or_default();
-    Some(SaveInfo { game: Some(game.into()), trainer: Some(utf16(d, name, 13)), badges, team, machines: None })
+    Some(SaveInfo { game: Some(game.into()), trainer: Some(utf16(d, name, 13)), badges, team, machines: None, beaten_trainers: None })
 }
 
 #[cfg(test)]
