@@ -75,6 +75,8 @@ pub struct App {
     zoom: f32,
     message: Option<(bool, String)>, // (is_error, text)
     search: Vec<String>,
+    /// PokeMMO attack names from the player's German Black/White ROM (index = attack id); loaded once, empty if none found
+    mmo_moves: Option<Vec<String>>,
     update_status: Arc<Mutex<Option<String>>>,
     sprites: Sprites,
 }
@@ -221,6 +223,7 @@ impl App {
             zoom: saved.zoom,
             message: None,
             search: vec![],
+            mmo_moves: None,
             update_status: Arc::new(Mutex::new(None)),
             sprites: Sprites::new(cc.egui_ctx.clone()),
         };
@@ -307,6 +310,9 @@ impl App {
         if key == self.data_key { return; }
         let vg = self.dex.vg(&self.game_id).expect("valid game id");
         self.learn = self.dex.learnsets(vg);
+        if self.game_id.starts_with(crate::data::POKEMMO) && self.mmo_moves.is_none() {
+            self.mmo_moves = Some(crate::pokemmo::move_names().unwrap_or_default());
+        }
         let mut key = key;
         if mmo {
             match crate::pokemmo::learnsets() {
@@ -398,7 +404,14 @@ impl App {
         sprite(ui, self.sprites.pokemon(species, &self.game_id), size);
     }
 
-    fn mname(&self, id: u16) -> String { self.dex.move_name(id, self.lang) }
+    fn mname(&self, id: u16) -> String {
+        // PokeMMO in German: the names from the player's Black/White ROM, as the game shows them.
+        let rom = self.mmo_moves.as_ref().filter(|_| self.lang == Lang::De && self.game_id.starts_with(crate::data::POKEMMO));
+        match rom.and_then(|n| n.get(id as usize)).filter(|n| !n.is_empty()) {
+            Some(n) => n.clone(),
+            None => self.dex.move_name(id, self.lang),
+        }
+    }
     fn sname(&self, id: u16) -> String { self.dex.species_name(id, self.lang) }
 
     fn open_save_dialog(&mut self) {
@@ -629,13 +642,10 @@ impl App {
                 None => String::new(),
             }
         };
-        // Search finds a move by its German and English name, and in PokeMMO by PokeMMO's own German name.
-        let mmo = self.game_id.starts_with(crate::data::POKEMMO);
+        // Search finds a move by the shown name, its English name and its current German name (e.g. "Pikser").
         let mut named: Vec<(u16, String, String, String)> = options.into_iter().map(|id| {
-            let alias = crate::pokemmo::de_move_name(id).filter(|_| mmo);
-            let name = match alias { Some(a) if self.lang == Lang::De => format!("{} / {a}", self.mname(id)), _ => self.mname(id) };
-            let key = crate::data::norm(&format!("{} {} {}", self.mname(id), self.dex.move_name(id, Lang::En), alias.unwrap_or("")));
-            (id, name, how(id), key)
+            let key = crate::data::norm(&format!("{} {} {}", self.mname(id), self.dex.move_name(id, Lang::En), self.dex.move_name(id, Lang::De)));
+            (id, self.mname(id), how(id), key)
         }).collect();
         named.sort_by(|a, b| a.1.cmp(&b.1));
         let mut moves = self.team[i].moves.clone();

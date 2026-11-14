@@ -8,17 +8,21 @@ use std::sync::atomic::{AtomicBool, Ordering};
 const URL: &str = "https://raw.githubusercontent.com/PokeMMO-Tools/pokemmo-hub/d462e849a7319b52ba6b5f15e368c24e23529dc8/src/data/pokemmo/monster.json";
 static FETCHING: AtomicBool = AtomicBool::new(false);
 
-/// German move names where PokeMMO's translation differs from the official games' (from the PokeMMO Hub's
-/// de-DE translation.json). "Schnabel" is confirmed in PokeMMO itself; the others are unverified.
-/// shortcut: that file covers only some moves, so names missing here may still differ in PokeMMO.
-pub const DE_MOVE_NAMES: &[(u16, &str)] = &[
-    (4, "Kometenschlag"), (64, "Schnabel"), (73, "Egel-Samen"), (94, "Psycho"), (96, "Meditieren"), (170, "Gedankenleser"),
-    (181, "Puderschnee"), (187, "Bauch Trommel"), (199, "Anvisieren"), (234, "Morgensonne"), (236, "Mondlicht"), (268, "Laden"),
-    (312, "Aromatherapie"), (346, "Wassersport"), (377, "Heilungshemmer"), (383, "Nachahmung"),
-];
-
-pub fn de_move_name(id: u16) -> Option<&'static str> {
-    DE_MOVE_NAMES.iter().find(|x| x.0 == id).map(|x| x.1)
+/// PokeMMO shows attack names from the player's own Black/White ROM (Gen 5 names, e.g. "Schnabel",
+/// where later games say "Pikser"). Its config lists the ROMs it uses; take the first Black/White one.
+/// shortcut: only the default install folders are searched; a PokeMMO installed elsewhere falls back to PokeAPI names.
+pub fn move_names() -> Option<Vec<String>> {
+    let dirs = ["ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA"].iter().filter_map(std::env::var_os)
+        .flat_map(|d| { let d = PathBuf::from(d); [d.join("PokeMMO"), d.join("Programs").join("PokeMMO")] });
+    for dir in dirs {
+        let Ok(cfg) = std::fs::read_to_string(dir.join("config").join("main.properties")) else { continue };
+        for (_, v) in cfg.lines().filter_map(|l| l.split_once('=')).filter(|(k, _)| k.starts_with("client.roms.nds")) {
+            // Java properties escape ':' and '\' with a backslash.
+            let p = v.trim().replace("\\:", ":").replace("\\\\", "\\");
+            if let Some(names) = crate::rom::bw_move_names(std::path::Path::new(&p)) { return Some(names); }
+        }
+    }
+    None
 }
 
 fn path() -> PathBuf {
@@ -90,6 +94,14 @@ mod tests {
         assert!(lv[&1].iter().filter(|e| e.1 == 45).count() == 1, "Bisasam: Heuler only once");
         assert!(tm[&1].len() > 30);
         assert!(!lv.contains_key(&650));
+    }
+
+    #[test]
+    fn move_names_from_black_rom() {
+        // Needs PokeMMO installed with a German Black/White ROM; skipped otherwise.
+        let Some(n) = super::move_names() else { return };
+        assert_eq!(n.len(), 560);
+        assert_eq!((n[16].as_str(), n[64].as_str(), n[85].as_str()), ("Windstoß", "Schnabel", "Donnerblitz"));
     }
 
     #[test]

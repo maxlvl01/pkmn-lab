@@ -9,6 +9,12 @@ fn u32le(d: &[u8], o: usize) -> usize { u32::from_le_bytes(d[o..o + 4].try_into(
 
 /// Resolve a path like "a/0/5/5" through the NDS file name table and return the file bytes.
 fn nds_file<'a>(rom: &'a [u8], path: &str) -> Option<&'a [u8]> {
+    let (s, e) = nds_range(rom, path)?;
+    rom.get(s..e)
+}
+
+/// Where a file sits in the ROM. `rom` only needs to reach the end of the name and allocation tables.
+fn nds_range(rom: &[u8], path: &str) -> Option<(usize, usize)> {
     let (fnt, fat) = (u32le(rom, 0x40), u32le(rom, 0x48));
     let mut dir = 0usize;
     let parts: Vec<&str> = path.split('/').collect();
@@ -20,7 +26,7 @@ fn nds_file<'a>(rom: &'a [u8], path: &str) -> Option<&'a [u8]> {
             let t = *rom.get(p)?;
             if t == 0 { return None; }
             let len = (t & 0x7F) as usize;
-            let name = &rom[p + 1..p + 1 + len];
+            let name = rom.get(p + 1..p + 1 + len)?;
             p += 1 + len;
             let is_dir = t & 0x80 != 0;
             if is_dir {
@@ -29,8 +35,8 @@ fn nds_file<'a>(rom: &'a [u8], path: &str) -> Option<&'a [u8]> {
                 if !last && name == part.as_bytes() { dir = id; break; }
             } else {
                 if last && name == part.as_bytes() {
-                    let (s, e) = (u32le(rom, fat + 8 * file_id), u32le(rom, fat + 8 * file_id + 4));
-                    return rom.get(s..e);
+                    rom.get(fat + 8 * file_id..fat + 8 * file_id + 8)?;
+                    return Some((u32le(rom, fat + 8 * file_id), u32le(rom, fat + 8 * file_id + 4)));
                 }
                 file_id += 1;
             }
@@ -274,6 +280,44 @@ pub fn gen4_messages(file: &[u8]) -> Vec<String> {
         });
         crate::save::gen4_text(unpack9(units.collect()))
     }).collect()
+}
+
+/// Gen 5 message file: UTF-16 strings, each XOR-encrypted with a key that rotates per character.
+fn gen5_messages(f: &[u8]) -> Option<Vec<String>> {
+    let lines = u16le(f.get(..4)?, 2) as usize;
+    let sec = u32le(f.get(..0x10)?, 0x0C);
+    (0..lines).map(|i| {
+        let e = sec + 4 + 8 * i;
+        let (off, len) = (sec + u32le(f.get(..e + 4)?, e), u16le(f.get(..e + 6)?, e + 4) as usize);
+        let mut key = (0x7C89u32 + 0x2983 * i as u32) & 0xFFFF;
+        let mut units = vec![];
+        for j in 0..len {
+            let c = u16le(f.get(..off + 2 * j + 2)?, off + 2 * j) ^ key as u16;
+            key = ((key << 3) | (key >> 13)) & 0xFFFF;
+            if c == 0xFFFF { break; }
+            if c < 0xF000 { units.push(c); } // skip control codes
+        }
+        Some(String::from_utf16_lossy(&units))
+    }).collect()
+}
+
+/// German attack names from a German Pokémon Black/White ROM, the names PokeMMO shows.
+/// Reads only the header tables and the text archive, not the whole ~256 MB file.
+pub fn bw_move_names(path: &std::path::Path) -> Option<Vec<String>> {
+    use std::io::{Read, Seek, SeekFrom};
+    let mut file = std::fs::File::open(path).ok()?;
+    let mut head = vec![0u8; 0x200];
+    file.read_exact(&mut head).ok()?;
+    if !matches!(&head[0x0C..0x10], b"IRBD" | b"IRAD") { return None; } // German Black / White
+    let end = (u32le(&head, 0x40) + u32le(&head, 0x44)).max(u32le(&head, 0x48) + u32le(&head, 0x4C));
+    head.resize(end, 0);
+    file.seek(SeekFrom::Start(0)).ok()?;
+    file.read_exact(&mut head).ok()?;
+    let (s, e) = nds_range(&head, "a/0/0/2")?;
+    let mut narc_bytes = vec![0u8; e.checked_sub(s)?];
+    file.seek(SeekFrom::Start(s as u64)).ok()?;
+    file.read_exact(&mut narc_bytes).ok()?;
+    gen5_messages(narc(&narc_bytes, 203)?) // file 203 = attack names, line = attack id
 }
 
 /// Names (e.g. trainer names) are stored packed: 0xF100, then 9-bit character codes in 15-bit chunks, 0x1FF = end.
