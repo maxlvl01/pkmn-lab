@@ -8,6 +8,19 @@ use std::sync::atomic::{AtomicBool, Ordering};
 const URL: &str = "https://raw.githubusercontent.com/PokeMMO-Tools/pokemmo-hub/d462e849a7319b52ba6b5f15e368c24e23529dc8/src/data/pokemmo/monster.json";
 static FETCHING: AtomicBool = AtomicBool::new(false);
 
+/// German move names where PokeMMO's translation differs from the official games' (from the PokeMMO Hub's
+/// de-DE translation.json). "Schnabel" is confirmed in PokeMMO itself; the others are unverified.
+/// shortcut: that file covers only some moves, so names missing here may still differ in PokeMMO.
+pub const DE_MOVE_NAMES: &[(u16, &str)] = &[
+    (4, "Kometenschlag"), (64, "Schnabel"), (73, "Egel-Samen"), (94, "Psycho"), (96, "Meditieren"), (170, "Gedankenleser"),
+    (181, "Puderschnee"), (187, "Bauch Trommel"), (199, "Anvisieren"), (234, "Morgensonne"), (236, "Mondlicht"), (268, "Laden"),
+    (312, "Aromatherapie"), (346, "Wassersport"), (377, "Heilungshemmer"), (383, "Nachahmung"),
+];
+
+pub fn de_move_name(id: u16) -> Option<&'static str> {
+    DE_MOVE_NAMES.iter().find(|x| x.0 == id).map(|x| x.1)
+}
+
 fn path() -> PathBuf {
     let base = std::env::var_os("LOCALAPPDATA").map(PathBuf::from).unwrap_or_else(std::env::temp_dir);
     base.join("pkmn-lab").join("pokemmo-monster-d462e849.json")

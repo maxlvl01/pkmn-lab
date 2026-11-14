@@ -629,7 +629,14 @@ impl App {
                 None => String::new(),
             }
         };
-        let mut named: Vec<(u16, String, String)> = options.into_iter().map(|id| (id, self.mname(id), how(id))).collect();
+        // Search finds a move by its German and English name, and in PokeMMO by PokeMMO's own German name.
+        let mmo = self.game_id.starts_with(crate::data::POKEMMO);
+        let mut named: Vec<(u16, String, String, String)> = options.into_iter().map(|id| {
+            let alias = crate::pokemmo::de_move_name(id).filter(|_| mmo);
+            let name = match alias { Some(a) if self.lang == Lang::De => format!("{} / {a}", self.mname(id)), _ => self.mname(id) };
+            let key = crate::data::norm(&format!("{} {} {}", self.mname(id), self.dex.move_name(id, Lang::En), alias.unwrap_or("")));
+            (id, name, how(id), key)
+        }).collect();
         named.sort_by(|a, b| a.1.cmp(&b.1));
         let mut moves = self.team[i].moves.clone();
         moves.resize(4, 0);
@@ -645,11 +652,11 @@ impl App {
                     let edit = ui.add(egui::TextEdit::singleline(&mut q).hint_text(t(l, "Search attack", "Attacke suchen")).desired_width(150.0));
                     if !edit.has_focus() && q.is_empty() { edit.request_focus(); }
                     let nq = crate::data::norm(&q);
-                    let hits: Vec<&(u16, String, String)> = named.iter().filter(|m| crate::data::norm(&m.1).contains(&nq)).collect();
+                    let hits: Vec<_> = named.iter().filter(|m| m.3.contains(&nq)).collect();
                     let enter = edit.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
                     if enter && let Some(m) = hits.first() { *slot = m.0; }
                     if nq.is_empty() { ui.selectable_value(slot, 0, "–"); }
-                    for (id, name, how) in hits {
+                    for (id, name, how, _) in hits {
                         let text = if how.is_empty() { name.clone() } else { format!("{name}  ({how})") };
                         ui.selectable_value(slot, *id, text);
                     }
