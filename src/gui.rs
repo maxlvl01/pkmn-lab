@@ -233,7 +233,7 @@ impl App {
         app.message = None;
         // "Open with" / drag onto the exe: files on the command line win over the remembered ones.
         for p in std::env::args().skip(1) {
-            if p.to_lowercase().ends_with(".nds") { app.load_rom(&p) } else { app.load_save(&p) }
+            if p.to_lowercase().ends_with(".nds") || p.to_lowercase().ends_with(".zip") { app.load_rom(&p) } else { app.load_save(&p) }
         }
         app.start_update_check(false);
         app
@@ -282,7 +282,7 @@ impl App {
     }
 
     fn load_rom(&mut self, path: &str) {
-        let result = std::fs::read(path).map_err(|e| e.to_string()).and_then(|bytes| {
+        let result = rom::read_rom(path).and_then(|bytes| {
             let game = "heartgold-soulsilver";
             let mut bosses = self.dex.bosses.iter().find(|g| g.id == game).map(|g| g.bosses.clone()).unwrap_or_default();
             rom::apply_rom_teams(&bytes, game, &mut bosses, &self.dex)?;
@@ -453,7 +453,7 @@ impl App {
             ui.label(RichText::new(t(l, "or drag it into the window", "oder einfach ins Fenster ziehen")).color(MUTED).small());
             ui.add_space(4.0);
             if ui.add_sized([ui.available_width(), 28.0], egui::Button::new(t(l, "Open ROM … (optional)", "ROM öffnen … (optional)"))).clicked() {
-                if let Some(p) = rfd::FileDialog::new().add_filter("NDS ROM", &["nds"]).pick_file() {
+                if let Some(p) = rfd::FileDialog::new().add_filter("NDS ROM", &["nds", "zip"]).pick_file() {
                     self.load_rom(&p.to_string_lossy());
                 }
             }
@@ -1743,10 +1743,10 @@ const BAR: Color32 = Color32::from_rgb(0x10, 0x13, 0x1b);
 impl eframe::App for App {
     fn ui(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
-        // Drag and drop: .nds is a ROM, anything else a save.
+        // Drag and drop: .nds (or a .zip holding one) is a ROM, anything else a save.
         for f in ctx.input(|i| i.raw.dropped_files.clone()) {
             let p = f.path().to_string_lossy().into_owned();
-            if p.to_lowercase().ends_with(".nds") { self.load_rom(&p) } else { self.load_save(&p) }
+            if p.to_lowercase().ends_with(".nds") || p.to_lowercase().ends_with(".zip") { self.load_rom(&p) } else { self.load_save(&p) }
         }
         if self.game_id.starts_with(crate::data::POKEMMO) {
             if !crate::pokemmo::ready() { crate::pokemmo::fetch(ctx.clone()); }

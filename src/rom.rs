@@ -45,6 +45,38 @@ fn nds_range(rom: &[u8], path: &str) -> Option<(usize, usize)> {
     None
 }
 
+/// The ROM bytes from an .nds file, or from the first .nds inside a .zip (as emulators accept).
+pub fn read_rom(path: &str) -> Result<Vec<u8>, String> {
+    let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
+    if !bytes.starts_with(b"PK\x03\x04") { return Ok(bytes); }
+    unzip_nds(&bytes).ok_or_else(|| "no readable .nds ROM in this zip".into())
+}
+
+/// First .nds entry of a zip archive (stored or deflated).
+/// shortcut: no ZIP64, so zips over 4 GB fail; NDS ROMs are at most 512 MB.
+fn unzip_nds(zip: &[u8]) -> Option<Vec<u8>> {
+    // End-of-central-directory record: within the last 64 KB (its comment can be up to 65535 bytes).
+    let eocd = (0..zip.len().checked_sub(22)? + 1).rev().take(65_557).find(|&i| zip[i..].starts_with(b"PK\x05\x06"))?;
+    let (count, mut p) = (u16le(zip, eocd + 10) as usize, u32le(zip, eocd + 16));
+    for _ in 0..count {
+        zip.get(p..p + 46).filter(|h| h.starts_with(b"PK\x01\x02"))?;
+        let (method, size, raw_size) = (u16le(zip, p + 10), u32le(zip, p + 20), u32le(zip, p + 24));
+        let (n, extra, comment, local) = (u16le(zip, p + 28) as usize, u16le(zip, p + 30) as usize, u16le(zip, p + 32) as usize, u32le(zip, p + 42));
+        let name = zip.get(p + 46..p + 46 + n)?;
+        p += 46 + n + extra + comment;
+        if !String::from_utf8_lossy(name).to_lowercase().ends_with(".nds") { continue; }
+        zip.get(local..local + 30).filter(|h| h.starts_with(b"PK\x03\x04"))?;
+        let start = local + 30 + u16le(zip, local + 26) as usize + u16le(zip, local + 28) as usize;
+        let data = zip.get(start..start + size)?;
+        return match method {
+            0 => Some(data.to_vec()),
+            8 => miniz_oxide::inflate::decompress_to_vec_with_limit(data, raw_size).ok(),
+            _ => None,
+        };
+    }
+    None
+}
+
 /// Member `i` of a NARC archive.
 fn narc(data: &[u8], i: usize) -> Option<&[u8]> {
     if !data.starts_with(b"NARC") || &data[0x10..0x14] != b"BTAF" { return None; }
@@ -340,6 +372,28 @@ fn unpack9(units: Vec<u16>) -> Vec<u16> {
 
 #[cfg(test)]
 mod tests {
+    /// A zip with a text file first and a deflated .nds second: the .nds comes back intact.
+    #[test]
+    fn rom_from_zip() {
+        let rom: Vec<u8> = (0..5000u32).map(|i| (i * 7 % 251) as u8).collect();
+        let entries = [("readme.txt", b"hi".to_vec(), 0u16, 2u32), ("Game (DE).NDS", miniz_oxide::deflate::compress_to_vec(&rom, 6), 8, rom.len() as u32)];
+        let (mut zip, mut cd) = (vec![], vec![]);
+        for (name, data, method, raw) in &entries {
+            let local = zip.len() as u32;
+            zip.extend(b"PK\x03\x04\x14\0\0\0"); zip.extend(method.to_le_bytes()); zip.extend([0u8; 8]);
+            zip.extend((data.len() as u32).to_le_bytes()); zip.extend(raw.to_le_bytes());
+            zip.extend((name.len() as u16).to_le_bytes()); zip.extend([0u8; 2]); zip.extend(name.as_bytes()); zip.extend(data);
+            cd.extend(b"PK\x01\x02\x14\0\x14\0\0\0"); cd.extend(method.to_le_bytes()); cd.extend([0u8; 8]);
+            cd.extend((data.len() as u32).to_le_bytes()); cd.extend(raw.to_le_bytes());
+            cd.extend((name.len() as u16).to_le_bytes()); cd.extend([0u8; 12]); cd.extend(local.to_le_bytes()); cd.extend(name.as_bytes());
+        }
+        let cd_at = zip.len() as u32;
+        zip.extend(&cd);
+        zip.extend(b"PK\x05\x06\0\0\0\0\x02\0\x02\0"); zip.extend((cd.len() as u32).to_le_bytes()); zip.extend(cd_at.to_le_bytes()); zip.extend([0u8; 2]);
+        assert_eq!(super::unzip_nds(&zip), Some(rom));
+        assert_eq!(super::unzip_nds(&zip[..zip.len() - 30]), None); // cut off: no panic
+    }
+
     /// Needs a German SoulSilver ROM; set PKMN_ROM to its path, otherwise the test is skipped.
     #[test]
     fn wild_pokemon_from_rom() {

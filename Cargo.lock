@@ -1549,6 +1549,7 @@ dependencies = [
  "eframe",
  "egui_extras",
  "image",
+ "miniz_oxide 0.8.9",
  "rfd",
  "serde",
  "serde_json",

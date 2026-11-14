@@ -10,7 +10,7 @@ It is a single file: no installer, and it updates itself (checks GitHub once a d
 1. Start `pkmn-lab-windows-x86_64.exe`.
 2. Drag your emulator save (`.sav`, `.dsv`, …) into the window, or click **Spielstand öffnen**. Game, badges, team,
    moves and the TMs in your bag are read from it. No save? **Team von Hand eingeben**, then pick the game.
-3. Optional for HeartGold/SoulSilver: drag the `.nds` ROM in as well. Then the real boss teams and level-up moves are read
+3. Optional for HeartGold/SoulSilver: drag the `.nds` ROM (or a `.zip` with it inside) in as well. Then the real boss teams and level-up moves are read
    from the ROM, plus every other trainer, your rival and where wild Pokémon live, so ROM hacks (e.g. hard mods) show
    what you will actually face.
 4. **PokeMMO:** pick "PokeMMO – Kanto / Johto / Hoenn / Sinnoh / Einall" as the game and enter your team by hand (PokeMMO
